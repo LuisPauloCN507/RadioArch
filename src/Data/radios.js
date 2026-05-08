@@ -1,25 +1,25 @@
 export const radioList = [
   {
     id: 1,
-    name: "Jovem Pan FM",
+    name: "Jovem Pan Teresina",
     city: "Teresina - PI",
-    url: "https://shaincast.com.br:7100/stream", // Exemplo, vamos validar os links depois
+    url: "https://shaincast.com.br:7101/stream",
     logo: "/logos/jovempan.png",
-    genre: "Pop/News",
+    genre: "Pop/Rock",
   },
   {
     id: 2,
     name: "Meio Norte FM",
     city: "Teresina - PI",
-    url: "https://9515.BrasilStream.com.br/stream",
+    url: "https://9515.brasilstream.com.br/stream",
     logo: "/logos/meionorte.png",
     genre: "Variedades",
   },
   {
     id: 3,
     name: "Rádio Liderança",
-    city: "Parnaíba - PI", // A Liderança tem várias sedes, coloquei Parnaíba como exemplo
-    url: "https://Cdn.BrasilStream.com.br/7144/stream",
+    city: "Teresina - PI",
+    url: "https://cdn.brasilstream.com.br/7144/stream",
     logo: "/logos/lideranca.png",
     genre: "Popular",
   },
@@ -33,17 +33,17 @@ export const radioList = [
   },
   {
     id: 5,
-    name: "Rock FM (Foco)",
-    city: "Web Rádio",
-    url: "https://n0a.radiojar.com/8s7u9m3tqwzuv",
+    name: "Arch Rock (Virgin)",
+    city: "Foco - Rock",
+    url: "https://icecast.unitedradio.it/Virgin.mp3",
     logo: "/logos/rock.png",
     genre: "Rock",
   },
   {
     id: 6,
-    name: "Electro Mix (Foco)",
-    city: "Web Rádio",
-    url: "https://icecast.unitedradio.it/Virgin.mp3", // Exemplo de eletrônica
+    name: "Arch Techno (Deep)",
+    city: "Foco - Eletrônica",
+    url: "https://pianosolo.net:8000/live.mp3",
     logo: "/logos/eletronica.png",
     genre: "Electronic",
   },
