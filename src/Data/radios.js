@@ -25,7 +25,7 @@ export const radioList = [
   },
   {
     id: 4,
-    name: "Virgin Radio (ROCK)",
+    name: "Virgin Radio",
     city: "Global - Estável",
     url: "https://icecast.unitedradio.it/Virgin.mp3",
     logo: "/logos/rock.png",
