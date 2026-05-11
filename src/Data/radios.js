@@ -33,10 +33,10 @@ export const radioList = [
   },
   {
     id: 5,
-    name: "Jovem Pan Teresina",
-    city: "Teresina - PI",
-    url: "https://shaincast.com.br:7101/stream", 
-    logo: "/logos/jovempan.png",
-    genre: "Pop/Rock",
-  }
+    name: "Hunter.fm Pop",
+    city: "Brasil - Online",
+    url: "https://live.hunter.fm/pop_stream?ag=mp3",
+    logo: "/logos/pop.png",
+    genre: "Pop",
+  },
 ];
