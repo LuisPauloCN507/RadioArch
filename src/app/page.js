@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { radioList } from '@/Data/radios';
+import { radioList } from '@/data/radios';
 import RadioCard from '@/components/RadioCard';
 import Player from '@/components/Player';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
