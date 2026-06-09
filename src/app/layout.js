@@ -1,6 +1,11 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
+const metadata = {
+  title: "RadioArch | Sua Conexão Digital",
+  description: "Biblioteca de Web Radios focados em música de alta qualidade.",
+};
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -11,10 +16,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata = {
-  title: "RadioArch | Sua Conexão Digital",
-  description: "A rádio do Piauí e canais focados em música de alta qualidade.",
-};
+export { metadata };
 
 export default function RootLayout({ children }) {
   return (
