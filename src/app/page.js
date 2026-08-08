@@ -100,7 +100,7 @@ export default function Home() {
         .glitch-effect { animation: glitch-anim 0.4s cubic-bezier(.25, .46, .45, .94) both; }
         .glitch-text { animation: glitch-anim 0.3s cubic-bezier(.25, .46, .45, .94) both; }
 
-        /* NOVA: Animação Scanner Line */
+        /* Animação Scanner Line */
         @keyframes scan-anim {
           0% { top: -10%; opacity: 0; }
           10% { opacity: 1; }
@@ -109,7 +109,7 @@ export default function Home() {
         }
         .animate-scan { animation: scan-anim 3s linear infinite; }
 
-        /* NOVA: Animação Equalizador */
+        /* Animação Equalizador */
         @keyframes eq-anim {
           0%, 100% { height: 3px; }
           50% { height: 12px; }
@@ -117,25 +117,15 @@ export default function Home() {
         .animate-eq1 { animation: eq-anim 0.8s ease-in-out infinite; }
         .animate-eq2 { animation: eq-anim 1.2s ease-in-out infinite 0.2s; }
         .animate-eq3 { animation: eq-anim 0.9s ease-in-out infinite 0.4s; }
-
-        /* NOVA: Cursor Piscante */
-        @keyframes blink-anim {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0; }
-        }
-        .animate-blink { animation: blink-anim 1s step-end infinite; }
       `}} />
 
       <audio ref={audioRef} />
 
-      <div className="absolute top-10 text-center z-10">
-        <h1 className="text-2xl font-black tracking-[0.4em] uppercase text-cyan-500 drop-shadow-[0_0_15px_rgba(34,211,238,0.3)]">
-          RADIO<span className="text-zinc-100">ARCH</span>
+      {/* TÍTULO / LOGO ORIGINAL RESTAURADO */}
+      <div className="absolute top-8 text-center z-10 font-sans">
+        <h1 className="text-xl font-black tracking-[0.3em] opacity-40 uppercase italic">
+          RADIO<span className="text-orange-500">ARCH</span>
         </h1>
-        {/* Cursor Piscante Adicionado Aqui */}
-        <div className="text-[10px] tracking-widest text-zinc-500 mt-2 flex items-center justify-center gap-1">
-          TERMINAL BROADCAST SYSTEM <span className="w-1.5 h-3 bg-cyan-500 inline-block animate-blink"></span>
-        </div>
       </div>
 
       <div className="relative w-full h-100 flex items-center justify-center overflow-visible z-10">
