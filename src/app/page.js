@@ -1,21 +1,24 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { radioList } from '@/data/radios';
-import RadioCard from '@/components/RadioCard';
 import Player from '@/components/Player';
+import RadioCard from '@/components/RadioCard';
+import { radioList } from '@/data/radios';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-const TRACK_SPACING = 180;
+const TRACK_SPACING = 200; 
 
-function RadioDeckItem({ radio, isCenter, offset, onSelect }) {
+function RadioDeckItem({ radio, isCenter, offset, onSelect, isGlitching }) {
   return (
     <div
       onClick={onSelect}
-      className="absolute cursor-pointer transition-all duration-700 ease-out"
+      className={`absolute cursor-pointer transition-all duration-700 ease-out ${
+        isCenter && isGlitching ? 'glitch-effect' : ''
+      }`}
       style={{
-        transform: `translateX(${offset * TRACK_SPACING}px)`,
+        transform: `translateX(${offset * TRACK_SPACING}px) ${isCenter && isGlitching ? 'skewX(5deg) scale(1.05)' : ''}`,
         zIndex: 10 - Math.abs(offset),
+        filter: isCenter && isGlitching ? 'contrast(150%) saturate(150%) hue-rotate(15deg)' : 'none',
       }}
     >
       <RadioCard radio={radio} isCenter={isCenter} />
@@ -27,6 +30,7 @@ export default function Home() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(0.5);
+  const [isGlitching, setIsGlitching] = useState(false);
   const audioRef = useRef(null);
 
   const radioCount = radioList.length;
@@ -42,9 +46,7 @@ export default function Home() {
 
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio || !currentRadio) {
-      return;
-    }
+    if (!audio || !currentRadio) return;
 
     if (isPlaying) {
       audio.play().catch(() => setIsPlaying(false));
@@ -61,9 +63,14 @@ export default function Home() {
   }, []);
 
   const changeRadio = useCallback((index) => {
+    setIsGlitching(true);
     setIsPlaying(false);
     resetAudio();
     setActiveIndex(index);
+    
+    setTimeout(() => {
+      setIsGlitching(false);
+    }, 400);
   }, [resetAudio]);
 
   useEffect(() => {
@@ -74,19 +81,67 @@ export default function Home() {
   }, [currentRadio]);
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-white overflow-hidden flex flex-col items-center justify-center font-sans">
+    <main className="min-h-screen bg-[#09090b] text-white overflow-hidden flex flex-col items-center justify-center font-mono relative selection:bg-cyan-500 selection:text-black">
+      
+      {/* Efeito CRT Scanlines */}
+      <div className="pointer-events-none fixed inset-0 z-40 opacity-[0.03] bg-[linear-gradient(rgba(255,255,255,0)_50%,rgba(0,0,0,0.5)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-size-[100%_4px,3px_100%]" />
+
+      {/* Estilos das Novas Animações + Glitch */}
+      <style dangerouslySetInnerHTML={{__html: `
+        /* Animação do Glitch */
+        @keyframes glitch-anim {
+          0% { clip-path: inset(10% 0 80% 0); transform: translate(-3px, 2px); filter: drop-shadow(2px 0 0 red) drop-shadow(-2px 0 0 cyan); }
+          20% { clip-path: inset(80% 0 5% 0); transform: translate(3px, -2px); filter: drop-shadow(-2px 0 0 red) drop-shadow(2px 0 0 cyan); }
+          40% { clip-path: inset(30% 0 50% 0); transform: translate(-3px, 1px); filter: drop-shadow(3px 0 0 red) drop-shadow(-3px 0 0 cyan); }
+          60% { clip-path: inset(70% 0 10% 0); transform: translate(2px, -1px); filter: drop-shadow(-3px 0 0 red) drop-shadow(3px 0 0 cyan); }
+          80% { clip-path: inset(20% 0 60% 0); transform: translate(-1px, 3px); filter: drop-shadow(2px 0 0 red) drop-shadow(-2px 0 0 cyan); }
+          100% { clip-path: inset(50% 0 30% 0); transform: translate(0); filter: none; }
+        }
+        .glitch-effect { animation: glitch-anim 0.4s cubic-bezier(.25, .46, .45, .94) both; }
+        .glitch-text { animation: glitch-anim 0.3s cubic-bezier(.25, .46, .45, .94) both; }
+
+        /* NOVA: Animação Scanner Line */
+        @keyframes scan-anim {
+          0% { top: -10%; opacity: 0; }
+          10% { opacity: 1; }
+          90% { opacity: 1; }
+          100% { top: 110%; opacity: 0; }
+        }
+        .animate-scan { animation: scan-anim 3s linear infinite; }
+
+        /* NOVA: Animação Equalizador */
+        @keyframes eq-anim {
+          0%, 100% { height: 3px; }
+          50% { height: 12px; }
+        }
+        .animate-eq1 { animation: eq-anim 0.8s ease-in-out infinite; }
+        .animate-eq2 { animation: eq-anim 1.2s ease-in-out infinite 0.2s; }
+        .animate-eq3 { animation: eq-anim 0.9s ease-in-out infinite 0.4s; }
+
+        /* NOVA: Cursor Piscante */
+        @keyframes blink-anim {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0; }
+        }
+        .animate-blink { animation: blink-anim 1s step-end infinite; }
+      `}} />
+
       <audio ref={audioRef} />
 
-      <div className="absolute top-8 text-center">
-        <h1 className="text-xl font-black tracking-[0.3em] opacity-40 uppercase italic">
-          RADIO<span className="text-orange-500">ARCH</span>
+      <div className="absolute top-10 text-center z-10">
+        <h1 className="text-2xl font-black tracking-[0.4em] uppercase text-cyan-500 drop-shadow-[0_0_15px_rgba(34,211,238,0.3)]">
+          RADIO<span className="text-zinc-100">ARCH</span>
         </h1>
+        {/* Cursor Piscante Adicionado Aqui */}
+        <div className="text-[10px] tracking-widest text-zinc-500 mt-2 flex items-center justify-center gap-1">
+          TERMINAL BROADCAST SYSTEM <span className="w-1.5 h-3 bg-cyan-500 inline-block animate-blink"></span>
+        </div>
       </div>
 
-      <div className="relative w-full h-100 flex items-center justify-center overflow-visible">
+      <div className="relative w-full h-100 flex items-center justify-center overflow-visible z-10">
         <button
           onClick={() => changeRadio(previousIndex)}
-          className="absolute left-6 z-50 p-4 text-zinc-700 hover:text-white transition-colors"
+          className="absolute left-6 z-50 p-4 text-zinc-700 hover:text-cyan-400 transition-colors"
           aria-label="Anterior"
         >
           <ChevronLeft size={48} strokeWidth={1} />
@@ -104,6 +159,7 @@ export default function Home() {
                 isCenter={isCenter}
                 offset={offset}
                 onSelect={() => changeRadio(index)}
+                isGlitching={isGlitching}
               />
             );
           })}
@@ -111,16 +167,16 @@ export default function Home() {
 
         <button
           onClick={() => changeRadio(nextIndex)}
-          className="absolute right-6 z-50 p-4 text-zinc-700 hover:text-white transition-colors"
+          className="absolute right-6 z-50 p-4 text-zinc-700 hover:text-cyan-400 transition-colors"
           aria-label="Próxima"
         >
           <ChevronRight size={48} strokeWidth={1} />
         </button>
       </div>
 
-      <div className="absolute bottom-32 text-center">
-        <h2 className="text-2xl font-bold text-white tracking-tighter">{currentRadio.name}</h2>
-        <p className="text-orange-500 text-sm font-medium tracking-widest uppercase">{currentRadio.genre}</p>
+      <div className={`absolute bottom-32 text-center z-10 transition-opacity ${isGlitching ? 'glitch-text opacity-70' : 'opacity-100'}`}>
+        <h2 className="text-2xl font-bold text-white tracking-wider">{currentRadio.name}</h2>
+        <p className="text-cyan-500 text-xs mt-2 font-medium tracking-[0.3em] uppercase">[{currentRadio.genre}]</p>
       </div>
 
       <Player 
