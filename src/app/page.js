@@ -33,16 +33,40 @@ export default function Home() {
   const [isGlitching, setIsGlitching] = useState(false);
   const audioRef = useRef(null);
 
-  const radioCount = radioList.length;
-  const currentRadio = radioList[activeIndex];
-  const previousIndex = (activeIndex - 1 + radioCount) % radioCount;
-  const nextIndex = (activeIndex + 1) % radioCount;
-
+  // ==========================================
+  // COMMIT 1: MEMÓRIA DO SISTEMA (LocalStorage)
+  // ==========================================
+  
+  // 1. Carregar rádio e volume salvos de forma ASSÍNCRONA para evitar Cascading Renders no React
   useEffect(() => {
+    setTimeout(() => {
+      const savedIndex = localStorage.getItem('radioarch_index');
+      const savedVolume = localStorage.getItem('radioarch_volume');
+      
+      if (savedIndex !== null) setActiveIndex(parseInt(savedIndex, 10));
+      if (savedVolume !== null) setVolume(parseFloat(savedVolume));
+    }, 0);
+  }, []);
+
+  // 2. Guardar a rádio sempre que for alterada
+  useEffect(() => {
+    localStorage.setItem('radioarch_index', activeIndex.toString());
+  }, [activeIndex]);
+
+  // 3. Guardar o volume e aplicá-lo ao áudio sempre que for alterado
+  useEffect(() => {
+    localStorage.setItem('radioarch_volume', volume.toString());
     if (audioRef.current) {
       audioRef.current.volume = volume;
     }
   }, [volume]);
+
+  // ==========================================
+
+  const radioCount = radioList.length;
+  const currentRadio = radioList[activeIndex];
+  const previousIndex = (activeIndex - 1 + radioCount) % radioCount;
+  const nextIndex = (activeIndex + 1) % radioCount;
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -80,6 +104,46 @@ export default function Home() {
     }
   }, [currentRadio]);
 
+  // ==========================================
+  // COMMIT 2: ATALHOS DE TECLADO (Keybinds)
+  // ==========================================
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+      switch (e.code) {
+        case 'Space':
+          e.preventDefault(); 
+          setIsPlaying((prev) => !prev);
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          changeRadio(nextIndex);
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          changeRadio(previousIndex);
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          setVolume((prev) => Math.min(prev + 0.1, 1)); 
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          setVolume((prev) => Math.max(prev - 0.1, 0)); 
+          break;
+        case 'KeyM':
+          e.preventDefault();
+          setVolume((prev) => (prev > 0 ? 0 : 0.5)); 
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [nextIndex, previousIndex, changeRadio]);
+  // ==========================================
+
   return (
     <main className="min-h-screen bg-[#09090b] text-white overflow-hidden flex flex-col items-center justify-center font-mono relative selection:bg-cyan-500 selection:text-black">
       
@@ -88,7 +152,6 @@ export default function Home() {
 
       {/* Estilos das Novas Animações + Glitch */}
       <style dangerouslySetInnerHTML={{__html: `
-        /* Animação do Glitch */
         @keyframes glitch-anim {
           0% { clip-path: inset(10% 0 80% 0); transform: translate(-3px, 2px); filter: drop-shadow(2px 0 0 red) drop-shadow(-2px 0 0 cyan); }
           20% { clip-path: inset(80% 0 5% 0); transform: translate(3px, -2px); filter: drop-shadow(-2px 0 0 red) drop-shadow(2px 0 0 cyan); }
@@ -99,21 +162,9 @@ export default function Home() {
         }
         .glitch-effect { animation: glitch-anim 0.4s cubic-bezier(.25, .46, .45, .94) both; }
         .glitch-text { animation: glitch-anim 0.3s cubic-bezier(.25, .46, .45, .94) both; }
-
-        /* Animação Scanner Line */
-        @keyframes scan-anim {
-          0% { top: -10%; opacity: 0; }
-          10% { opacity: 1; }
-          90% { opacity: 1; }
-          100% { top: 110%; opacity: 0; }
-        }
+        @keyframes scan-anim { 0% { top: -10%; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 110%; opacity: 0; } }
         .animate-scan { animation: scan-anim 3s linear infinite; }
-
-        /* Animação Equalizador */
-        @keyframes eq-anim {
-          0%, 100% { height: 3px; }
-          50% { height: 12px; }
-        }
+        @keyframes eq-anim { 0%, 100% { height: 3px; } 50% { height: 12px; } }
         .animate-eq1 { animation: eq-anim 0.8s ease-in-out infinite; }
         .animate-eq2 { animation: eq-anim 1.2s ease-in-out infinite 0.2s; }
         .animate-eq3 { animation: eq-anim 0.9s ease-in-out infinite 0.4s; }
@@ -121,7 +172,7 @@ export default function Home() {
 
       <audio ref={audioRef} />
 
-      {/* TÍTULO / LOGO ORIGINAL RESTAURADO */}
+      {/* TÍTULO / LOGO ORIGINAL */}
       <div className="absolute top-8 text-center z-10 font-sans">
         <h1 className="text-xl font-black tracking-[0.3em] opacity-40 uppercase italic">
           RADIO<span className="text-orange-500">ARCH</span>
