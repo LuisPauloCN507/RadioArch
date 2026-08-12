@@ -1,12 +1,12 @@
-import { Pause, Play, Volume2, VolumeX } from 'lucide-react';
+import { Pause, Play, Star, Volume2, VolumeX } from 'lucide-react';
 
-const RadioInfo = ({ radio, isPlaying }) => (
+const RadioInfo = ({ radio, isPlaying, isFavorite, toggleFavorite }) => (
   <div className="flex items-center gap-4 w-1/3 min-w-0 font-mono">
     {/* eslint-disable-next-line @next/next/no-img-element */}
     <img 
       src={radio.logo} 
       alt={radio.name}
-      className="w-12 h-12 border border-cyan-900 hidden sm:block object-cover grayscale opacity-80" 
+      className="w-12 h-12 border border-cyan-900 hidden sm:block object-contain bg-black p-1" 
     />
     <div className="truncate flex flex-col justify-center">
       <div className="flex items-center gap-2 mb-1">
@@ -14,7 +14,6 @@ const RadioInfo = ({ radio, isPlaying }) => (
           {isPlaying ? '>>> ON_AIR' : '|| STANDBY'}
         </span>
         
-        {/* NOVA ANIMAÇÃO: Equalizador (só aparece se estiver a tocar) */}
         {isPlaying && (
           <div className="flex items-end gap-0.5 h-3">
             <div className="w-0.75 bg-cyan-400 animate-eq1"></div>
@@ -24,7 +23,16 @@ const RadioInfo = ({ radio, isPlaying }) => (
         )}
       </div>
 
-      <h4 className="font-bold text-sm text-zinc-200 truncate tracking-wide">{radio.name}</h4>
+      <div className="flex items-center gap-2">
+        <h4 className="font-bold text-sm text-zinc-200 truncate tracking-wide">{radio.name}</h4>
+        <button 
+          onClick={toggleFavorite} 
+          className={`transition-colors focus:outline-none ${isFavorite ? 'text-yellow-400' : 'text-zinc-600 hover:text-yellow-400/50'}`}
+          title="Marcar como Favorita"
+        >
+          <Star size={14} fill={isFavorite ? "currentColor" : "none"} />
+        </button>
+      </div>
     </div>
   </div>
 );
@@ -40,11 +48,7 @@ const PlayButton = ({ isPlaying, onPlayPause }) => (
       }`}
       aria-label={isPlaying ? 'Pausar' : 'Reproduzir'}
     >
-      {isPlaying ? (
-        <Pause size={24} fill="currentColor" />
-      ) : (
-        <Play size={24} fill="currentColor" />
-      )}
+      {isPlaying ? <Pause size={24} fill="currentColor" /> : <Play size={24} fill="currentColor" />}
     </button>
   </div>
 );
@@ -58,9 +62,7 @@ const VolumeControl = ({ volume, onVolumeChange }) => (
     )}
     <input 
       type="range" 
-      min="0" 
-      max="1" 
-      step="0.01" 
+      min="0" max="1" step="0.01" 
       value={volume}
       onChange={(e) => onVolumeChange(parseFloat(e.target.value))}
       className="w-20 sm:w-24 h-1 bg-zinc-800 appearance-none cursor-pointer accent-cyan-500 rounded-none"
@@ -69,18 +71,16 @@ const VolumeControl = ({ volume, onVolumeChange }) => (
   </div>
 );
 
-export default function Player({ currentRadio, isPlaying, onPlayPause, volume, onVolumeChange }) {
+export default function Player({ currentRadio, isPlaying, onPlayPause, volume, onVolumeChange, isFavorite, toggleFavorite }) {
   if (!currentRadio) return null;
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-black/90 backdrop-blur-md border-t border-cyan-900/50 p-4 z-50">
       <div className="max-w-6xl mx-auto flex items-center justify-between gap-4 relative">
-        
-        {/* Cantos Decorativos do Player */}
         <div className="absolute -top-4 -left-4 w-2 h-2 bg-cyan-500 hidden sm:block"></div>
         <div className="absolute -bottom-4 -right-4 w-2 h-2 bg-orange-500 hidden sm:block"></div>
 
-        <RadioInfo radio={currentRadio} isPlaying={isPlaying} />
+        <RadioInfo radio={currentRadio} isPlaying={isPlaying} isFavorite={isFavorite} toggleFavorite={toggleFavorite} />
         <PlayButton isPlaying={isPlaying} onPlayPause={onPlayPause} />
         <VolumeControl volume={volume} onVolumeChange={onVolumeChange} />
       </div>

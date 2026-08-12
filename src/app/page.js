@@ -2,6 +2,8 @@
 
 import Player from '@/components/Player';
 import RadioCard from '@/components/RadioCard';
+import SysPanel from '@/components/SysPanel';
+import TerminalCLI from '@/components/TerminalCLI';
 import { radioList } from '@/data/radios';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -31,42 +33,52 @@ export default function Home() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(0.5);
   const [isGlitching, setIsGlitching] = useState(false);
+  
+  const [favorites, setFavorites] = useState([]);
+  const [filterMode, setFilterMode] = useState('all'); 
+  const [isTerminalOpen, setIsTerminalOpen] = useState(false);
+  
   const audioRef = useRef(null);
 
-  // ==========================================
-  // COMMIT 1: MEMÓRIA DO SISTEMA (LocalStorage)
-  // ==========================================
-  
-  // 1. Carregar rádio e volume salvos de forma ASSÍNCRONA para evitar Cascading Renders no React
+  const displayRadios = filterMode === 'favs' && favorites.length > 0 
+    ? radioList.filter(r => favorites.includes(r.id)) 
+    : radioList;
+
   useEffect(() => {
     setTimeout(() => {
       const savedIndex = localStorage.getItem('radioarch_index');
       const savedVolume = localStorage.getItem('radioarch_volume');
+      const savedFavs = localStorage.getItem('radioarch_favs');
       
       if (savedIndex !== null) setActiveIndex(parseInt(savedIndex, 10));
       if (savedVolume !== null) setVolume(parseFloat(savedVolume));
+      if (savedFavs) setFavorites(JSON.parse(savedFavs));
     }, 0);
   }, []);
 
-  // 2. Guardar a rádio sempre que for alterada
-  useEffect(() => {
-    localStorage.setItem('radioarch_index', activeIndex.toString());
-  }, [activeIndex]);
-
-  // 3. Guardar o volume e aplicá-lo ao áudio sempre que for alterado
-  useEffect(() => {
+  useEffect(() => { localStorage.setItem('radioarch_index', activeIndex.toString()); }, [activeIndex]);
+  useEffect(() => { 
     localStorage.setItem('radioarch_volume', volume.toString());
-    if (audioRef.current) {
-      audioRef.current.volume = volume;
-    }
+    if (audioRef.current) audioRef.current.volume = volume;
   }, [volume]);
+  useEffect(() => { localStorage.setItem('radioarch_favs', JSON.stringify(favorites)); }, [favorites]);
 
-  // ==========================================
+  const radioCount = displayRadios.length;
+  const safeIndex = activeIndex >= radioCount ? 0 : activeIndex;
+  const currentRadio = displayRadios[safeIndex];
+  
+  const previousIndex = (safeIndex - 1 + radioCount) % radioCount;
+  const nextIndex = (safeIndex + 1) % radioCount;
 
-  const radioCount = radioList.length;
-  const currentRadio = radioList[activeIndex];
-  const previousIndex = (activeIndex - 1 + radioCount) % radioCount;
-  const nextIndex = (activeIndex + 1) % radioCount;
+  // Removido o useCallback - O React Compiler otimiza isto automaticamente
+  const handleToggleFavorite = () => {
+    if (!currentRadio) return;
+    setFavorites(prev => 
+      prev.includes(currentRadio.id) 
+        ? prev.filter(id => id !== currentRadio.id) 
+        : [...prev, currentRadio.id]
+    );
+  };
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -91,10 +103,7 @@ export default function Home() {
     setIsPlaying(false);
     resetAudio();
     setActiveIndex(index);
-    
-    setTimeout(() => {
-      setIsGlitching(false);
-    }, 400);
+    setTimeout(() => setIsGlitching(false), 400);
   }, [resetAudio]);
 
   useEffect(() => {
@@ -104,62 +113,75 @@ export default function Home() {
     }
   }, [currentRadio]);
 
-  // ==========================================
-  // COMMIT 2: ATALHOS DE TECLADO (Keybinds)
-  // ==========================================
+  const handleCommand = (cmdStr) => {
+    const args = cmdStr.split(' ');
+    const command = args[0];
+    const value = args[1];
+
+    switch (command) {
+      case 'play': setIsPlaying(true); break;
+      case 'pause': setIsPlaying(false); break;
+      case 'next': changeRadio(nextIndex); break;
+      case 'prev': changeRadio(previousIndex); break;
+      case 'vol':
+      case 'volume':
+        if (value && !isNaN(value)) setVolume(Math.min(100, Math.max(0, parseInt(value))) / 100);
+        break;
+      case 'favs': 
+        setFilterMode('favs'); 
+        setActiveIndex(0); 
+        break;
+      case 'all': 
+        setFilterMode('all'); 
+        setActiveIndex(0); 
+        break;
+      default:
+        const foundIndex = displayRadios.findIndex(r => 
+          r.name.toLowerCase().includes(command) || r.genre.toLowerCase().includes(command)
+        );
+        if (foundIndex !== -1) {
+          changeRadio(foundIndex);
+          setIsPlaying(true);
+        }
+        break;
+    }
+  };
+
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if (e.key === '/') {
+        if (!isTerminalOpen) {
+          e.preventDefault();
+          setIsTerminalOpen(true);
+        }
+        return;
+      }
+
+      if (isTerminalOpen || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
       switch (e.code) {
-        case 'Space':
-          e.preventDefault(); 
-          setIsPlaying((prev) => !prev);
-          break;
-        case 'ArrowRight':
-          e.preventDefault();
-          changeRadio(nextIndex);
-          break;
-        case 'ArrowLeft':
-          e.preventDefault();
-          changeRadio(previousIndex);
-          break;
-        case 'ArrowUp':
-          e.preventDefault();
-          setVolume((prev) => Math.min(prev + 0.1, 1)); 
-          break;
-        case 'ArrowDown':
-          e.preventDefault();
-          setVolume((prev) => Math.max(prev - 0.1, 0)); 
-          break;
-        case 'KeyM':
-          e.preventDefault();
-          setVolume((prev) => (prev > 0 ? 0 : 0.5)); 
-          break;
+        case 'Space': e.preventDefault(); setIsPlaying((prev) => !prev); break;
+        case 'ArrowRight': e.preventDefault(); changeRadio(nextIndex); break;
+        case 'ArrowLeft': e.preventDefault(); changeRadio(previousIndex); break;
+        case 'ArrowUp': e.preventDefault(); setVolume((prev) => Math.min(prev + 0.1, 1)); break;
+        case 'ArrowDown': e.preventDefault(); setVolume((prev) => Math.max(prev - 0.1, 0)); break;
+        case 'KeyM': e.preventDefault(); setVolume((prev) => (prev > 0 ? 0 : 0.5)); break;
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [nextIndex, previousIndex, changeRadio]);
-  // ==========================================
+  }, [nextIndex, previousIndex, changeRadio, isTerminalOpen]);
 
   return (
     <main className="min-h-screen bg-[#09090b] text-white overflow-hidden flex flex-col items-center justify-center font-mono relative selection:bg-cyan-500 selection:text-black">
       
-      {/* Efeito CRT Scanlines */}
+      <SysPanel />
+
       <div className="pointer-events-none fixed inset-0 z-40 opacity-[0.03] bg-[linear-gradient(rgba(255,255,255,0)_50%,rgba(0,0,0,0.5)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-size-[100%_4px,3px_100%]" />
 
-      {/* Estilos das Novas Animações + Glitch */}
       <style dangerouslySetInnerHTML={{__html: `
-        @keyframes glitch-anim {
-          0% { clip-path: inset(10% 0 80% 0); transform: translate(-3px, 2px); filter: drop-shadow(2px 0 0 red) drop-shadow(-2px 0 0 cyan); }
-          20% { clip-path: inset(80% 0 5% 0); transform: translate(3px, -2px); filter: drop-shadow(-2px 0 0 red) drop-shadow(2px 0 0 cyan); }
-          40% { clip-path: inset(30% 0 50% 0); transform: translate(-3px, 1px); filter: drop-shadow(3px 0 0 red) drop-shadow(-3px 0 0 cyan); }
-          60% { clip-path: inset(70% 0 10% 0); transform: translate(2px, -1px); filter: drop-shadow(-3px 0 0 red) drop-shadow(3px 0 0 cyan); }
-          80% { clip-path: inset(20% 0 60% 0); transform: translate(-1px, 3px); filter: drop-shadow(2px 0 0 red) drop-shadow(-2px 0 0 cyan); }
-          100% { clip-path: inset(50% 0 30% 0); transform: translate(0); filter: none; }
-        }
+        @keyframes glitch-anim { 0% { clip-path: inset(10% 0 80% 0); transform: translate(-3px, 2px); filter: drop-shadow(2px 0 0 red) drop-shadow(-2px 0 0 cyan); } 20% { clip-path: inset(80% 0 5% 0); transform: translate(3px, -2px); filter: drop-shadow(-2px 0 0 red) drop-shadow(2px 0 0 cyan); } 40% { clip-path: inset(30% 0 50% 0); transform: translate(-3px, 1px); filter: drop-shadow(3px 0 0 red) drop-shadow(-3px 0 0 cyan); } 60% { clip-path: inset(70% 0 10% 0); transform: translate(2px, -1px); filter: drop-shadow(-3px 0 0 red) drop-shadow(3px 0 0 cyan); } 80% { clip-path: inset(20% 0 60% 0); transform: translate(-1px, 3px); filter: drop-shadow(2px 0 0 red) drop-shadow(-2px 0 0 cyan); } 100% { clip-path: inset(50% 0 30% 0); transform: translate(0); filter: none; } }
         .glitch-effect { animation: glitch-anim 0.4s cubic-bezier(.25, .46, .45, .94) both; }
         .glitch-text { animation: glitch-anim 0.3s cubic-bezier(.25, .46, .45, .94) both; }
         @keyframes scan-anim { 0% { top: -10%; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 110%; opacity: 0; } }
@@ -172,26 +194,29 @@ export default function Home() {
 
       <audio ref={audioRef} />
 
-      {/* TÍTULO / LOGO ORIGINAL */}
       <div className="absolute top-8 text-center z-10 font-sans">
         <h1 className="text-xl font-black tracking-[0.3em] opacity-40 uppercase italic">
           RADIO<span className="text-orange-500">ARCH</span>
         </h1>
+        {filterMode === 'favs' && (
+          <div className="mt-2 text-[10px] text-yellow-500 font-mono tracking-widest border border-yellow-900/50 bg-yellow-900/20 px-2 py-1 inline-block">
+            [ FILTER: FAVORITES ]
+          </div>
+        )}
       </div>
 
       <div className="relative w-full h-100 flex items-center justify-center overflow-visible z-10">
         <button
           onClick={() => changeRadio(previousIndex)}
           className="absolute left-6 z-50 p-4 text-zinc-700 hover:text-cyan-400 transition-colors"
-          aria-label="Anterior"
         >
           <ChevronLeft size={48} strokeWidth={1} />
         </button>
 
         <div className="relative flex items-center justify-center w-full max-w-7xl">
-          {radioList.map((radio, index) => {
-            const isCenter = index === activeIndex;
-            const offset = index - activeIndex;
+          {displayRadios.map((radio, index) => {
+            const isCenter = index === safeIndex;
+            const offset = index - safeIndex;
 
             return (
               <RadioDeckItem
@@ -209,16 +234,21 @@ export default function Home() {
         <button
           onClick={() => changeRadio(nextIndex)}
           className="absolute right-6 z-50 p-4 text-zinc-700 hover:text-cyan-400 transition-colors"
-          aria-label="Próxima"
         >
           <ChevronRight size={48} strokeWidth={1} />
         </button>
       </div>
 
       <div className={`absolute bottom-32 text-center z-10 transition-opacity ${isGlitching ? 'glitch-text opacity-70' : 'opacity-100'}`}>
-        <h2 className="text-2xl font-bold text-white tracking-wider">{currentRadio.name}</h2>
-        <p className="text-cyan-500 text-xs mt-2 font-medium tracking-[0.3em] uppercase">[{currentRadio.genre}]</p>
+        <h2 className="text-2xl font-bold text-white tracking-wider">{currentRadio?.name}</h2>
+        <p className="text-cyan-500 text-xs mt-2 font-medium tracking-[0.3em] uppercase">[{currentRadio?.genre}]</p>
       </div>
+
+      <TerminalCLI 
+        isOpen={isTerminalOpen} 
+        onClose={() => setIsTerminalOpen(false)} 
+        onCommand={handleCommand}
+      />
 
       <Player 
         currentRadio={currentRadio} 
@@ -226,6 +256,8 @@ export default function Home() {
         onPlayPause={() => setIsPlaying(!isPlaying)}
         volume={volume}
         onVolumeChange={setVolume}
+        isFavorite={favorites.includes(currentRadio?.id)}
+        toggleFavorite={handleToggleFavorite}
       />
     </main>
   );
