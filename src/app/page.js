@@ -70,7 +70,6 @@ export default function Home() {
   const previousIndex = (safeIndex - 1 + radioCount) % radioCount;
   const nextIndex = (safeIndex + 1) % radioCount;
 
-  // Removido o useCallback - O React Compiler otimiza isto automaticamente
   const handleToggleFavorite = () => {
     if (!currentRadio) return;
     setFavorites(prev => 
@@ -186,7 +185,7 @@ export default function Home() {
         .glitch-text { animation: glitch-anim 0.3s cubic-bezier(.25, .46, .45, .94) both; }
         @keyframes scan-anim { 0% { top: -10%; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 110%; opacity: 0; } }
         .animate-scan { animation: scan-anim 3s linear infinite; }
-        @keyframes eq-anim { 0%, 100% { height: 3px; } 50% { height: 12px; } }
+        @keyframes eq-anim { 0%, 100% { height: 4px; } 50% { height: 16px; } }
         .animate-eq1 { animation: eq-anim 0.8s ease-in-out infinite; }
         .animate-eq2 { animation: eq-anim 1.2s ease-in-out infinite 0.2s; }
         .animate-eq3 { animation: eq-anim 0.9s ease-in-out infinite 0.4s; }
@@ -194,6 +193,7 @@ export default function Home() {
 
       <audio ref={audioRef} />
 
+      {/* HEADER RADIO ARCH */}
       <div className="absolute top-8 text-center z-10 font-sans">
         <h1 className="text-xl font-black tracking-[0.3em] opacity-40 uppercase italic">
           RADIO<span className="text-orange-500">ARCH</span>
@@ -205,6 +205,30 @@ export default function Home() {
         )}
       </div>
 
+      {/* NOVO: CONTROLE DE VOLUME LATERAL */}
+      <div className="absolute right-8 top-1/2 -translate-y-1/2 flex flex-col items-center justify-between h-48 z-50">
+        <span className="text-[10px] text-cyan-500 font-mono tracking-widest uppercase bg-cyan-900/20 px-1 border border-cyan-900/50">
+          Vol
+        </span>
+        
+        <div className="w-8 h-32 flex items-center justify-center">
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            value={volume}
+            onChange={(e) => setVolume(parseFloat(e.target.value))}
+            className="w-32 h-1 appearance-none bg-zinc-800 rounded-full outline-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-cyan-400 [&::-webkit-slider-thumb]:rounded-full cursor-pointer -rotate-90 origin-center"
+          />
+        </div>
+
+        <span className="text-[10px] text-zinc-500 font-mono w-8 text-center">
+          {Math.round(volume * 100)}%
+        </span>
+      </div>
+
+      {/* DECK DE RADIOS */}
       <div className="relative w-full h-100 flex items-center justify-center overflow-visible z-10">
         <button
           onClick={() => changeRadio(previousIndex)}
@@ -239,7 +263,30 @@ export default function Home() {
         </button>
       </div>
 
-      <div className={`absolute bottom-32 text-center z-10 transition-opacity ${isGlitching ? 'glitch-text opacity-70' : 'opacity-100'}`}>
+      {/* NOME DA RADIO E EQUALIZADOR */}
+      <div className={`absolute bottom-32 text-center z-10 transition-opacity flex flex-col items-center ${isGlitching ? 'glitch-text opacity-70' : 'opacity-100'}`}>
+        
+        {/* NOVO: ONDAS SONORAS */}
+        <div className="flex items-end justify-center gap-1.5 h-4 mb-4">
+          {isPlaying ? (
+            <>
+              <div className="w-1.5 bg-cyan-400 animate-eq1 shadow-[0_0_8px_rgba(34,211,238,0.8)]"></div>
+              <div className="w-1.5 bg-cyan-400 animate-eq2 shadow-[0_0_8px_rgba(34,211,238,0.8)]"></div>
+              <div className="w-1.5 bg-cyan-400 animate-eq3 shadow-[0_0_8px_rgba(34,211,238,0.8)]"></div>
+              <div className="w-1.5 bg-cyan-400 animate-eq1 shadow-[0_0_8px_rgba(34,211,238,0.8)]" style={{ animationDelay: '0.1s' }}></div>
+              <div className="w-1.5 bg-cyan-400 animate-eq2 shadow-[0_0_8px_rgba(34,211,238,0.8)]" style={{ animationDelay: '0.3s' }}></div>
+            </>
+          ) : (
+            <>
+              <div className="w-1.5 h-1 bg-zinc-800"></div>
+              <div className="w-1.5 h-1 bg-zinc-800"></div>
+              <div className="w-1.5 h-1 bg-zinc-800"></div>
+              <div className="w-1.5 h-1 bg-zinc-800"></div>
+              <div className="w-1.5 h-1 bg-zinc-800"></div>
+            </>
+          )}
+        </div>
+
         <h2 className="text-2xl font-bold text-white tracking-wider">{currentRadio?.name}</h2>
         <p className="text-cyan-500 text-xs mt-2 font-medium tracking-[0.3em] uppercase">[{currentRadio?.genre}]</p>
       </div>
