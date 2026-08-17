@@ -38,7 +38,13 @@ export default function Home() {
   const [filterMode, setFilterMode] = useState('all'); 
   const [isTerminalOpen, setIsTerminalOpen] = useState(false);
   
+  // Referências para o Áudio e Web Audio API
   const audioRef = useRef(null);
+  const canvasRef = useRef(null);
+  const audioCtxRef = useRef(null);
+  const analyserRef = useRef(null);
+  const sourceRef = useRef(null);
+  const requestRef = useRef(null);
 
   const displayRadios = filterMode === 'favs' && favorites.length > 0 
     ? radioList.filter(r => favorites.includes(r.id)) 
@@ -54,13 +60,18 @@ export default function Home() {
       if (savedVolume !== null) setVolume(parseFloat(savedVolume));
       if (savedFavs) setFavorites(JSON.parse(savedFavs));
     }, 0);
+
+    // Limpeza da animação ao desmontar componente
+    return () => cancelAnimationFrame(requestRef.current);
   }, []);
 
   useEffect(() => { localStorage.setItem('radioarch_index', activeIndex.toString()); }, [activeIndex]);
+  
   useEffect(() => { 
     localStorage.setItem('radioarch_volume', volume.toString());
     if (audioRef.current) audioRef.current.volume = volume;
   }, [volume]);
+  
   useEffect(() => { localStorage.setItem('radioarch_favs', JSON.stringify(favorites)); }, [favorites]);
 
   const radioCount = displayRadios.length;
@@ -79,14 +90,90 @@ export default function Home() {
     );
   };
 
+  // ----- LÓGICA DO VISUALIZADOR WEB AUDIO API -----
+  const startVisualizer = () => {
+    if (!canvasRef.current || !analyserRef.current) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    const bufferLength = analyserRef.current.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+
+    const draw = () => {
+      requestRef.current = requestAnimationFrame(draw);
+      analyserRef.current.getByteFrequencyData(dataArray);
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Quantidade de barras para o look Retro
+      const barCount = 16; 
+      const barWidth = (canvas.width / barCount) - 2;
+      let x = 0;
+
+      for (let i = 0; i < barCount; i++) {
+        // Multiplicador para focar nas frequências mais ativas
+        const barHeight = (dataArray[i * 2] / 255) * canvas.height;
+
+        // Estilo Cyberpunk/Glow
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = 'rgba(34, 211, 238, 0.8)';
+        ctx.fillStyle = '#22d3ee'; // cyan-400
+
+        ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+        x += barWidth + 2;
+      }
+    };
+    
+    cancelAnimationFrame(requestRef.current);
+    draw();
+  };
+
+  const stopVisualizer = () => {
+    cancelAnimationFrame(requestRef.current);
+    if (canvasRef.current) {
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Desenha linhas de base apagadas quando em pausa
+      const barCount = 16;
+      const barWidth = (canvas.width / barCount) - 2;
+      ctx.fillStyle = '#27272a'; // zinc-800
+      ctx.shadowBlur = 0;
+      
+      for(let i = 0; i < barCount; i++) {
+          ctx.fillRect(i * (barWidth + 2), canvas.height - 2, barWidth, 2);
+      }
+    }
+  };
+
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !currentRadio) return;
 
     if (isPlaying) {
-      audio.play().catch(() => setIsPlaying(false));
+      // Iniciar a API de Áudio apenas quando o utilizador interage (políticas do browser)
+      if (!audioCtxRef.current) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        audioCtxRef.current = new AudioContext();
+        analyserRef.current = audioCtxRef.current.createAnalyser();
+        analyserRef.current.fftSize = 64; // Tamanho ideal para visualização chunky/retro
+        
+        sourceRef.current = audioCtxRef.current.createMediaElementSource(audio);
+        sourceRef.current.connect(analyserRef.current);
+        analyserRef.current.connect(audioCtxRef.current.destination);
+      }
+      
+      if (audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume();
+      }
+
+      audio.play().then(() => {
+        startVisualizer();
+      }).catch(() => setIsPlaying(false));
+      
     } else {
       audio.pause();
+      stopVisualizer();
     }
   }, [isPlaying, currentRadio]);
 
@@ -172,6 +259,11 @@ export default function Home() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [nextIndex, previousIndex, changeRadio, isTerminalOpen]);
 
+  // Renderização inicial do canvas parado
+  useEffect(() => {
+    if (!isPlaying) stopVisualizer();
+  }, [isPlaying]);
+
   return (
     <main className="min-h-screen bg-[#09090b] text-white overflow-hidden flex flex-col items-center justify-center font-mono relative selection:bg-cyan-500 selection:text-black">
       
@@ -183,15 +275,10 @@ export default function Home() {
         @keyframes glitch-anim { 0% { clip-path: inset(10% 0 80% 0); transform: translate(-3px, 2px); filter: drop-shadow(2px 0 0 red) drop-shadow(-2px 0 0 cyan); } 20% { clip-path: inset(80% 0 5% 0); transform: translate(3px, -2px); filter: drop-shadow(-2px 0 0 red) drop-shadow(2px 0 0 cyan); } 40% { clip-path: inset(30% 0 50% 0); transform: translate(-3px, 1px); filter: drop-shadow(3px 0 0 red) drop-shadow(-3px 0 0 cyan); } 60% { clip-path: inset(70% 0 10% 0); transform: translate(2px, -1px); filter: drop-shadow(-3px 0 0 red) drop-shadow(3px 0 0 cyan); } 80% { clip-path: inset(20% 0 60% 0); transform: translate(-1px, 3px); filter: drop-shadow(2px 0 0 red) drop-shadow(-2px 0 0 cyan); } 100% { clip-path: inset(50% 0 30% 0); transform: translate(0); filter: none; } }
         .glitch-effect { animation: glitch-anim 0.4s cubic-bezier(.25, .46, .45, .94) both; }
         .glitch-text { animation: glitch-anim 0.3s cubic-bezier(.25, .46, .45, .94) both; }
-        @keyframes scan-anim { 0% { top: -10%; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 110%; opacity: 0; } }
-        .animate-scan { animation: scan-anim 3s linear infinite; }
-        @keyframes eq-anim { 0%, 100% { height: 4px; } 50% { height: 16px; } }
-        .animate-eq1 { animation: eq-anim 0.8s ease-in-out infinite; }
-        .animate-eq2 { animation: eq-anim 1.2s ease-in-out infinite 0.2s; }
-        .animate-eq3 { animation: eq-anim 0.9s ease-in-out infinite 0.4s; }
       `}} />
 
-      <audio ref={audioRef} />
+      {/* IMPORTANTE: crossOrigin="anonymous" é essencial para o AudioContext ler as frequências */}
+      <audio ref={audioRef} crossOrigin="anonymous" />
 
       {/* HEADER RADIO ARCH */}
       <div className="absolute top-8 text-center z-10 font-sans">
@@ -205,7 +292,7 @@ export default function Home() {
         )}
       </div>
 
-      {/* NOVO: CONTROLE DE VOLUME LATERAL */}
+      {/* CONTROLE DE VOLUME LATERAL */}
       <div className="absolute right-8 top-1/2 -translate-y-1/2 flex flex-col items-center justify-between h-48 z-50">
         <span className="text-[10px] text-cyan-500 font-mono tracking-widest uppercase bg-cyan-900/20 px-1 border border-cyan-900/50">
           Vol
@@ -263,29 +350,16 @@ export default function Home() {
         </button>
       </div>
 
-      {/* NOME DA RADIO E EQUALIZADOR */}
+      {/* NOME DA RADIO E NOVO CANVAS EQUALIZADOR */}
       <div className={`absolute bottom-32 text-center z-10 transition-opacity flex flex-col items-center ${isGlitching ? 'glitch-text opacity-70' : 'opacity-100'}`}>
         
-        {/* NOVO: ONDAS SONORAS */}
-        <div className="flex items-end justify-center gap-1.5 h-4 mb-4">
-          {isPlaying ? (
-            <>
-              <div className="w-1.5 bg-cyan-400 animate-eq1 shadow-[0_0_8px_rgba(34,211,238,0.8)]"></div>
-              <div className="w-1.5 bg-cyan-400 animate-eq2 shadow-[0_0_8px_rgba(34,211,238,0.8)]"></div>
-              <div className="w-1.5 bg-cyan-400 animate-eq3 shadow-[0_0_8px_rgba(34,211,238,0.8)]"></div>
-              <div className="w-1.5 bg-cyan-400 animate-eq1 shadow-[0_0_8px_rgba(34,211,238,0.8)]" style={{ animationDelay: '0.1s' }}></div>
-              <div className="w-1.5 bg-cyan-400 animate-eq2 shadow-[0_0_8px_rgba(34,211,238,0.8)]" style={{ animationDelay: '0.3s' }}></div>
-            </>
-          ) : (
-            <>
-              <div className="w-1.5 h-1 bg-zinc-800"></div>
-              <div className="w-1.5 h-1 bg-zinc-800"></div>
-              <div className="w-1.5 h-1 bg-zinc-800"></div>
-              <div className="w-1.5 h-1 bg-zinc-800"></div>
-              <div className="w-1.5 h-1 bg-zinc-800"></div>
-            </>
-          )}
-        </div>
+        {/* Espectrómetro Retro Real */}
+        <canvas 
+          ref={canvasRef} 
+          width={180} 
+          height={40} 
+          className="mb-4"
+        />
 
         <h2 className="text-2xl font-bold text-white tracking-wider">{currentRadio?.name}</h2>
         <p className="text-cyan-500 text-xs mt-2 font-medium tracking-[0.3em] uppercase">[{currentRadio?.genre}]</p>
