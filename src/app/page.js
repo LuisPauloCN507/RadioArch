@@ -10,6 +10,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 const TRACK_SPACING = 200; 
 
+// Dicionário de Temas Disponíveis
+const THEMES = {
+  cyan: { color: '#22d3ee', textClass: 'text-cyan-400', selection: 'selection:bg-cyan-500' },
+  matrix: { color: '#22c55e', textClass: 'text-green-500', selection: 'selection:bg-green-500' },
+  amber: { color: '#f59e0b', textClass: 'text-amber-500', selection: 'selection:bg-amber-500' },
+  purple: { color: '#c084fc', textClass: 'text-purple-400', selection: 'selection:bg-purple-500' }
+};
+
 function RadioDeckItem({ radio, isCenter, offset, onSelect, isGlitching }) {
   return (
     <div
@@ -38,13 +46,39 @@ export default function Home() {
   const [filterMode, setFilterMode] = useState('all'); 
   const [isTerminalOpen, setIsTerminalOpen] = useState(false);
   
-  // Referências para o Áudio e Web Audio API
+  // NOVO: Estado do Tema
+  const [theme, setTheme] = useState('cyan');
+  const activeTheme = THEMES[theme] || THEMES.cyan;
+  const themeColorRef = useRef(activeTheme.color); // Ref para o canvas aceder à cor mais recente
+  
   const audioRef = useRef(null);
   const canvasRef = useRef(null);
   const audioCtxRef = useRef(null);
   const analyserRef = useRef(null);
   const sourceRef = useRef(null);
   const requestRef = useRef(null);
+
+  // NOVO: Função para gerar Bips Sonoros do Sistema
+  const playSystemBeep = useCallback((freq = 800, type = 'square', duration = 0.05) => {
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, ctx.currentTime);
+      gain.gain.setValueAtTime(0.05, ctx.currentTime); // Volume baixo para não incomodar
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + duration);
+    } catch (e) {
+      console.log("AudioContext não permitido até interação.");
+    }
+  }, []);
 
   const displayRadios = filterMode === 'favs' && favorites.length > 0 
     ? radioList.filter(r => favorites.includes(r.id)) 
@@ -55,24 +89,29 @@ export default function Home() {
       const savedIndex = localStorage.getItem('radioarch_index');
       const savedVolume = localStorage.getItem('radioarch_volume');
       const savedFavs = localStorage.getItem('radioarch_favs');
+      const savedTheme = localStorage.getItem('radioarch_theme');
       
       if (savedIndex !== null) setActiveIndex(parseInt(savedIndex, 10));
       if (savedVolume !== null) setVolume(parseFloat(savedVolume));
       if (savedFavs) setFavorites(JSON.parse(savedFavs));
+      if (savedTheme && THEMES[savedTheme]) setTheme(savedTheme);
     }, 0);
 
-    // Limpeza da animação ao desmontar componente
     return () => cancelAnimationFrame(requestRef.current);
   }, []);
 
   useEffect(() => { localStorage.setItem('radioarch_index', activeIndex.toString()); }, [activeIndex]);
-  
   useEffect(() => { 
     localStorage.setItem('radioarch_volume', volume.toString());
     if (audioRef.current) audioRef.current.volume = volume;
   }, [volume]);
-  
   useEffect(() => { localStorage.setItem('radioarch_favs', JSON.stringify(favorites)); }, [favorites]);
+  
+  // Atualiza a Ref e o LocalStorage quando o tema muda
+  useEffect(() => { 
+    localStorage.setItem('radioarch_theme', theme); 
+    themeColorRef.current = activeTheme.color;
+  }, [theme, activeTheme]);
 
   const radioCount = displayRadios.length;
   const safeIndex = activeIndex >= radioCount ? 0 : activeIndex;
@@ -88,9 +127,9 @@ export default function Home() {
         ? prev.filter(id => id !== currentRadio.id) 
         : [...prev, currentRadio.id]
     );
+    playSystemBeep(1200, 'sine', 0.1); // Bip agudo para favorito
   };
 
-  // ----- LÓGICA DO VISUALIZADOR WEB AUDIO API -----
   const startVisualizer = () => {
     if (!canvasRef.current || !analyserRef.current) return;
     const canvas = canvasRef.current;
@@ -104,19 +143,16 @@ export default function Home() {
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Quantidade de barras para o look Retro
       const barCount = 16; 
       const barWidth = (canvas.width / barCount) - 2;
       let x = 0;
 
       for (let i = 0; i < barCount; i++) {
-        // Multiplicador para focar nas frequências mais ativas
         const barHeight = (dataArray[i * 2] / 255) * canvas.height;
 
-        // Estilo Cyberpunk/Glow
         ctx.shadowBlur = 8;
-        ctx.shadowColor = 'rgba(34, 211, 238, 0.8)';
-        ctx.fillStyle = '#22d3ee'; // cyan-400
+        ctx.shadowColor = themeColorRef.current; // Usa a cor do tema dinamicamente
+        ctx.fillStyle = themeColorRef.current;
 
         ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
         x += barWidth + 2;
@@ -134,10 +170,9 @@ export default function Home() {
       const ctx = canvas.getContext('2d');
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-      // Desenha linhas de base apagadas quando em pausa
       const barCount = 16;
       const barWidth = (canvas.width / barCount) - 2;
-      ctx.fillStyle = '#27272a'; // zinc-800
+      ctx.fillStyle = '#27272a'; 
       ctx.shadowBlur = 0;
       
       for(let i = 0; i < barCount; i++) {
@@ -151,12 +186,11 @@ export default function Home() {
     if (!audio || !currentRadio) return;
 
     if (isPlaying) {
-      // Iniciar a API de Áudio apenas quando o utilizador interage (políticas do browser)
       if (!audioCtxRef.current) {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         audioCtxRef.current = new AudioContext();
         analyserRef.current = audioCtxRef.current.createAnalyser();
-        analyserRef.current.fftSize = 64; // Tamanho ideal para visualização chunky/retro
+        analyserRef.current.fftSize = 64; 
         
         sourceRef.current = audioCtxRef.current.createMediaElementSource(audio);
         sourceRef.current.connect(analyserRef.current);
@@ -189,8 +223,9 @@ export default function Home() {
     setIsPlaying(false);
     resetAudio();
     setActiveIndex(index);
+    playSystemBeep(300, 'square', 0.08); // Bip grave de transição
     setTimeout(() => setIsGlitching(false), 400);
-  }, [resetAudio]);
+  }, [resetAudio, playSystemBeep]);
 
   useEffect(() => {
     if (audioRef.current && currentRadio) {
@@ -200,9 +235,11 @@ export default function Home() {
   }, [currentRadio]);
 
   const handleCommand = (cmdStr) => {
-    const args = cmdStr.split(' ');
+    const args = cmdStr.toLowerCase().split(' ');
     const command = args[0];
     const value = args[1];
+
+    let executed = true;
 
     switch (command) {
       case 'play': setIsPlaying(true); break;
@@ -221,6 +258,15 @@ export default function Home() {
         setFilterMode('all'); 
         setActiveIndex(0); 
         break;
+      case 'theme': // NOVO COMANDO NO TERMINAL
+      case 'color':
+        if (THEMES[value]) {
+          setTheme(value);
+          playSystemBeep(600, 'sine', 0.2); // Bip especial de tema
+        } else {
+           console.log("Temas disponíveis: cyan, matrix, amber, purple");
+        }
+        break;
       default:
         const foundIndex = displayRadios.findIndex(r => 
           r.name.toLowerCase().includes(command) || r.genre.toLowerCase().includes(command)
@@ -228,9 +274,14 @@ export default function Home() {
         if (foundIndex !== -1) {
           changeRadio(foundIndex);
           setIsPlaying(true);
+        } else {
+          executed = false;
         }
         break;
     }
+    
+    // Toca bip sempre que um comando é reconhecido
+    if (executed) playSystemBeep(900, 'square', 0.05);
   };
 
   useEffect(() => {
@@ -239,6 +290,7 @@ export default function Home() {
         if (!isTerminalOpen) {
           e.preventDefault();
           setIsTerminalOpen(true);
+          playSystemBeep(1500, 'triangle', 0.05); // Bip ao abrir terminal
         }
         return;
       }
@@ -257,27 +309,31 @@ export default function Home() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [nextIndex, previousIndex, changeRadio, isTerminalOpen]);
+  }, [nextIndex, previousIndex, changeRadio, isTerminalOpen, playSystemBeep]);
 
-  // Renderização inicial do canvas parado
   useEffect(() => {
     if (!isPlaying) stopVisualizer();
   }, [isPlaying]);
 
   return (
-    <main className="min-h-screen bg-[#09090b] text-white overflow-hidden flex flex-col items-center justify-center font-mono relative selection:bg-cyan-500 selection:text-black">
+    <main className={`min-h-screen bg-[#09090b] text-white overflow-hidden flex flex-col items-center justify-center font-mono relative ${activeTheme.selection} selection:text-black`}>
       
       <SysPanel />
 
       <div className="pointer-events-none fixed inset-0 z-40 opacity-[0.03] bg-[linear-gradient(rgba(255,255,255,0)_50%,rgba(0,0,0,0.5)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-size-[100%_4px,3px_100%]" />
 
       <style dangerouslySetInnerHTML={{__html: `
-        @keyframes glitch-anim { 0% { clip-path: inset(10% 0 80% 0); transform: translate(-3px, 2px); filter: drop-shadow(2px 0 0 red) drop-shadow(-2px 0 0 cyan); } 20% { clip-path: inset(80% 0 5% 0); transform: translate(3px, -2px); filter: drop-shadow(-2px 0 0 red) drop-shadow(2px 0 0 cyan); } 40% { clip-path: inset(30% 0 50% 0); transform: translate(-3px, 1px); filter: drop-shadow(3px 0 0 red) drop-shadow(-3px 0 0 cyan); } 60% { clip-path: inset(70% 0 10% 0); transform: translate(2px, -1px); filter: drop-shadow(-3px 0 0 red) drop-shadow(3px 0 0 cyan); } 80% { clip-path: inset(20% 0 60% 0); transform: translate(-1px, 3px); filter: drop-shadow(2px 0 0 red) drop-shadow(-2px 0 0 cyan); } 100% { clip-path: inset(50% 0 30% 0); transform: translate(0); filter: none; } }
+        @keyframes glitch-anim { 0% { clip-path: inset(10% 0 80% 0); transform: translate(-3px, 2px); filter: drop-shadow(2px 0 0 red) drop-shadow(-2px 0 0 ${activeTheme.color}); } 20% { clip-path: inset(80% 0 5% 0); transform: translate(3px, -2px); filter: drop-shadow(-2px 0 0 red) drop-shadow(2px 0 0 ${activeTheme.color}); } 40% { clip-path: inset(30% 0 50% 0); transform: translate(-3px, 1px); filter: drop-shadow(3px 0 0 red) drop-shadow(-3px 0 0 ${activeTheme.color}); } 60% { clip-path: inset(70% 0 10% 0); transform: translate(2px, -1px); filter: drop-shadow(-3px 0 0 red) drop-shadow(3px 0 0 ${activeTheme.color}); } 80% { clip-path: inset(20% 0 60% 0); transform: translate(-1px, 3px); filter: drop-shadow(2px 0 0 red) drop-shadow(-2px 0 0 ${activeTheme.color}); } 100% { clip-path: inset(50% 0 30% 0); transform: translate(0); filter: none; } }
         .glitch-effect { animation: glitch-anim 0.4s cubic-bezier(.25, .46, .45, .94) both; }
         .glitch-text { animation: glitch-anim 0.3s cubic-bezier(.25, .46, .45, .94) both; }
+        
+        /* Tema dinâmico injetado para o controlo de volume não sofrer com o purge do tailwind */
+        .theme-slider::-webkit-slider-thumb {
+          background-color: ${activeTheme.color} !important;
+          box-shadow: 0 0 8px ${activeTheme.color};
+        }
       `}} />
 
-      {/* IMPORTANTE: crossOrigin="anonymous" é essencial para o AudioContext ler as frequências */}
       <audio ref={audioRef} crossOrigin="anonymous" />
 
       {/* HEADER RADIO ARCH */}
@@ -286,15 +342,15 @@ export default function Home() {
           RADIO<span className="text-orange-500">ARCH</span>
         </h1>
         {filterMode === 'favs' && (
-          <div className="mt-2 text-[10px] text-yellow-500 font-mono tracking-widest border border-yellow-900/50 bg-yellow-900/20 px-2 py-1 inline-block">
+          <div className={`mt-2 text-[10px] ${activeTheme.textClass} font-mono tracking-widest border border-current px-2 py-1 inline-block opacity-70`}>
             [ FILTER: FAVORITES ]
           </div>
         )}
       </div>
 
-      {/* CONTROLE DE VOLUME LATERAL */}
+      {/* CONTROLE DE VOLUME LATERAL COM TEMA DINÂMICO */}
       <div className="absolute right-8 top-1/2 -translate-y-1/2 flex flex-col items-center justify-between h-48 z-50">
-        <span className="text-[10px] text-cyan-500 font-mono tracking-widest uppercase bg-cyan-900/20 px-1 border border-cyan-900/50">
+        <span className={`text-[10px] ${activeTheme.textClass} font-mono tracking-widest uppercase px-1 opacity-70`}>
           Vol
         </span>
         
@@ -306,7 +362,7 @@ export default function Home() {
             step="0.01"
             value={volume}
             onChange={(e) => setVolume(parseFloat(e.target.value))}
-            className="w-32 h-1 appearance-none bg-zinc-800 rounded-full outline-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-cyan-400 [&::-webkit-slider-thumb]:rounded-full cursor-pointer -rotate-90 origin-center"
+            className="theme-slider w-32 h-1 appearance-none bg-zinc-800 rounded-full outline-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full cursor-pointer -rotate-90 origin-center"
           />
         </div>
 
@@ -319,7 +375,7 @@ export default function Home() {
       <div className="relative w-full h-100 flex items-center justify-center overflow-visible z-10">
         <button
           onClick={() => changeRadio(previousIndex)}
-          className="absolute left-6 z-50 p-4 text-zinc-700 hover:text-cyan-400 transition-colors"
+          className={`absolute left-6 z-50 p-4 text-zinc-700 hover:${activeTheme.textClass} transition-colors`}
         >
           <ChevronLeft size={48} strokeWidth={1} />
         </button>
@@ -344,16 +400,15 @@ export default function Home() {
 
         <button
           onClick={() => changeRadio(nextIndex)}
-          className="absolute right-6 z-50 p-4 text-zinc-700 hover:text-cyan-400 transition-colors"
+          className={`absolute right-6 z-50 p-4 text-zinc-700 hover:${activeTheme.textClass} transition-colors`}
         >
           <ChevronRight size={48} strokeWidth={1} />
         </button>
       </div>
 
-      {/* NOME DA RADIO E NOVO CANVAS EQUALIZADOR */}
+      {/* NOME DA RADIO E EQUALIZADOR */}
       <div className={`absolute bottom-32 text-center z-10 transition-opacity flex flex-col items-center ${isGlitching ? 'glitch-text opacity-70' : 'opacity-100'}`}>
         
-        {/* Espectrómetro Retro Real */}
         <canvas 
           ref={canvasRef} 
           width={180} 
@@ -362,7 +417,7 @@ export default function Home() {
         />
 
         <h2 className="text-2xl font-bold text-white tracking-wider">{currentRadio?.name}</h2>
-        <p className="text-cyan-500 text-xs mt-2 font-medium tracking-[0.3em] uppercase">[{currentRadio?.genre}]</p>
+        <p className={`${activeTheme.textClass} text-xs mt-2 font-medium tracking-[0.3em] uppercase transition-colors`}>[{currentRadio?.genre}]</p>
       </div>
 
       <TerminalCLI 
