@@ -1,37 +1,46 @@
 'use client';
 
 import Player from '@/components/Player';
-import RadioCard from '@/components/RadioCard';
-import SysPanel from '@/components/SysPanel';
-import TerminalCLI from '@/components/TerminalCLI';
 import { radioList } from '@/data/radios';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronUp, Heart, Play, Square } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-const TRACK_SPACING = 200; 
+// Espaçamento ligeiramente aumentado para acomodar as logos maiores
+const VERTICAL_SPACING = 180; 
+const LCD_COLOR = '#22d3ee'; 
 
-// Dicionário de Temas Disponíveis
-const THEMES = {
-  cyan: { color: '#22d3ee', textClass: 'text-cyan-400', selection: 'selection:bg-cyan-500' },
-  matrix: { color: '#22c55e', textClass: 'text-green-500', selection: 'selection:bg-green-500' },
-  amber: { color: '#f59e0b', textClass: 'text-amber-500', selection: 'selection:bg-amber-500' },
-  purple: { color: '#c084fc', textClass: 'text-purple-400', selection: 'selection:bg-purple-500' }
-};
-
-function RadioDeckItem({ radio, isCenter, offset, onSelect, isGlitching }) {
+// COMPONENTE DO COVER FLOW VERTICAL
+function VerticalDeckItem({ radio, isCenter, offset, onSelect }) {
+  const isVisible = Math.abs(offset) <= 2;
+  
   return (
     <div
       onClick={onSelect}
-      className={`absolute cursor-pointer transition-all duration-700 ease-out ${
-        isCenter && isGlitching ? 'glitch-effect' : ''
-      }`}
+      className={`absolute w-full cursor-pointer transition-all duration-500 ease-out flex justify-center ${isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
       style={{
-        transform: `translateX(${offset * TRACK_SPACING}px) ${isCenter && isGlitching ? 'skewX(5deg) scale(1.05)' : ''}`,
+        transform: `translateY(${offset * VERTICAL_SPACING}px) scale(${isCenter ? 1.05 : 0.85}) perspective(800px) rotateX(${offset * -25}deg)`,
         zIndex: 10 - Math.abs(offset),
-        filter: isCenter && isGlitching ? 'contrast(150%) saturate(150%) hue-rotate(15deg)' : 'none',
+        filter: isCenter ? 'none' : 'grayscale(80%) brightness(40%)',
       }}
     >
-      <RadioCard radio={radio} isCenter={isCenter} />
+      {/* Logos aumentadas: de w-56 h-32 para w-64 h-40 */}
+      <div className={`transition-all duration-500 w-64 h-40 flex items-center justify-center ${isCenter ? 'drop-shadow-[0_0_15px_rgba(34,211,238,0.5)] scale-110' : 'drop-shadow-md'}`}>
+        {radio.logo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img 
+            src={radio.logo} 
+            alt={radio.name} 
+            className="w-full h-full object-contain opacity-90 hover:opacity-100 transition-opacity"
+            onError={(e) => {
+              e.target.style.display = 'none';
+              if (e.target.nextSibling) e.target.nextSibling.style.display = 'block';
+            }}
+          />
+        ) : null}
+        <span className={`text-zinc-500 font-bold text-center px-4 ${radio.logo ? 'hidden' : 'block'}`}>
+          {radio.name}
+        </span>
+      </div>
     </div>
   );
 }
@@ -39,17 +48,9 @@ function RadioDeckItem({ radio, isCenter, offset, onSelect, isGlitching }) {
 export default function Home() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [volume, setVolume] = useState(0.5);
-  const [isGlitching, setIsGlitching] = useState(false);
-  
   const [favorites, setFavorites] = useState([]);
-  const [filterMode, setFilterMode] = useState('all'); 
-  const [isTerminalOpen, setIsTerminalOpen] = useState(false);
-  
-  // NOVO: Estado do Tema
-  const [theme, setTheme] = useState('cyan');
-  const activeTheme = THEMES[theme] || THEMES.cyan;
-  const themeColorRef = useRef(activeTheme.color); // Ref para o canvas aceder à cor mais recente
   
   const audioRef = useRef(null);
   const canvasRef = useRef(null);
@@ -57,44 +58,110 @@ export default function Home() {
   const analyserRef = useRef(null);
   const sourceRef = useRef(null);
   const requestRef = useRef(null);
+  const noiseNodeRef = useRef(null); 
 
-  // NOVO: Função para gerar Bips Sonoros do Sistema
+  // SOM DE CLIQUE MECÂNICO
+  const playClickSound = useCallback(() => {
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
+      const ctx = audioCtxRef.current;
+      
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(800, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.03); 
+      
+      gain.gain.setValueAtTime(0.1, ctx.currentTime); 
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.03);
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.05);
+    } catch (e) {}
+  }, []);
+
+  // SOM DE BIPE PARA FAVORITOS
   const playSystemBeep = useCallback((freq = 800, type = 'square', duration = 0.05) => {
     try {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
-      const ctx = new AudioContext();
+      if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
+      const ctx = audioCtxRef.current;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       
       osc.type = type;
       osc.frequency.setValueAtTime(freq, ctx.currentTime);
-      gain.gain.setValueAtTime(0.05, ctx.currentTime); // Volume baixo para não incomodar
+      gain.gain.setValueAtTime(0.08, ctx.currentTime); 
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
       
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start();
       osc.stop(ctx.currentTime + duration);
-    } catch (e) {
-      console.log("AudioContext não permitido até interação.");
+    } catch (e) {}
+  }, []);
+
+  // GERADOR DE ESTÁTICA
+  const startTuningSound = useCallback(() => {
+    try {
+      if (noiseNodeRef.current) return; 
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
+      const ctx = audioCtxRef.current;
+
+      const bufferSize = ctx.sampleRate * 2; 
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+
+      const noiseSource = ctx.createBufferSource();
+      noiseSource.buffer = buffer;
+      noiseSource.loop = true;
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = 1000;
+
+      const gain = ctx.createGain();
+      gain.gain.value = 0.15; 
+
+      noiseSource.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+
+      noiseSource.start();
+      noiseNodeRef.current = { source: noiseSource, gain: gain };
+    } catch (e) {}
+  }, []);
+
+  const stopTuningSound = useCallback(() => {
+    if (noiseNodeRef.current) {
+      try {
+        noiseNodeRef.current.source.stop();
+        noiseNodeRef.current.source.disconnect();
+        noiseNodeRef.current.gain.disconnect();
+      } catch (e) {}
+      noiseNodeRef.current = null;
     }
   }, []);
 
-  const displayRadios = filterMode === 'favs' && favorites.length > 0 
-    ? radioList.filter(r => favorites.includes(r.id)) 
-    : radioList;
+  const displayRadios = radioList;
 
   useEffect(() => {
     setTimeout(() => {
       const savedIndex = localStorage.getItem('radioarch_index');
       const savedVolume = localStorage.getItem('radioarch_volume');
       const savedFavs = localStorage.getItem('radioarch_favs');
-      const savedTheme = localStorage.getItem('radioarch_theme');
       
       if (savedIndex !== null) setActiveIndex(parseInt(savedIndex, 10));
       if (savedVolume !== null) setVolume(parseFloat(savedVolume));
       if (savedFavs) setFavorites(JSON.parse(savedFavs));
-      if (savedTheme && THEMES[savedTheme]) setTheme(savedTheme);
     }, 0);
 
     return () => cancelAnimationFrame(requestRef.current);
@@ -106,12 +173,14 @@ export default function Home() {
     if (audioRef.current) audioRef.current.volume = volume;
   }, [volume]);
   useEffect(() => { localStorage.setItem('radioarch_favs', JSON.stringify(favorites)); }, [favorites]);
-  
-  // Atualiza a Ref e o LocalStorage quando o tema muda
-  useEffect(() => { 
-    localStorage.setItem('radioarch_theme', theme); 
-    themeColorRef.current = activeTheme.color;
-  }, [theme, activeTheme]);
+
+  useEffect(() => {
+    if (isPlaying && isLoading) {
+      startTuningSound();
+    } else {
+      stopTuningSound();
+    }
+  }, [isPlaying, isLoading, startTuningSound, stopTuningSound]);
 
   const radioCount = displayRadios.length;
   const safeIndex = activeIndex >= radioCount ? 0 : activeIndex;
@@ -127,7 +196,7 @@ export default function Home() {
         ? prev.filter(id => id !== currentRadio.id) 
         : [...prev, currentRadio.id]
     );
-    playSystemBeep(1200, 'sine', 0.1); // Bip agudo para favorito
+    playSystemBeep(1200, 'sine', 0.1); 
   };
 
   const startVisualizer = () => {
@@ -142,18 +211,15 @@ export default function Home() {
       analyserRef.current.getByteFrequencyData(dataArray);
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      const barCount = 16; 
+      const barCount = 20; 
       const barWidth = (canvas.width / barCount) - 2;
       let x = 0;
 
       for (let i = 0; i < barCount; i++) {
         const barHeight = (dataArray[i * 2] / 255) * canvas.height;
-
-        ctx.shadowBlur = 8;
-        ctx.shadowColor = themeColorRef.current; // Usa a cor do tema dinamicamente
-        ctx.fillStyle = themeColorRef.current;
-
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = LCD_COLOR; 
+        ctx.fillStyle = LCD_COLOR;
         ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
         x += barWidth + 2;
       }
@@ -170,16 +236,21 @@ export default function Home() {
       const ctx = canvas.getContext('2d');
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-      const barCount = 16;
+      const barCount = 20;
       const barWidth = (canvas.width / barCount) - 2;
-      ctx.fillStyle = '#27272a'; 
+      ctx.fillStyle = '#18181b'; 
       ctx.shadowBlur = 0;
-      
       for(let i = 0; i < barCount; i++) {
           ctx.fillRect(i * (barWidth + 2), canvas.height - 2, barWidth, 2);
       }
     }
   };
+
+  const togglePlay = useCallback(() => {
+    if (!isPlaying) setIsLoading(true); 
+    setIsPlaying(!isPlaying);
+    playClickSound(); 
+  }, [isPlaying, playClickSound]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -196,15 +267,12 @@ export default function Home() {
         sourceRef.current.connect(analyserRef.current);
         analyserRef.current.connect(audioCtxRef.current.destination);
       }
-      
-      if (audioCtxRef.current.state === 'suspended') {
-        audioCtxRef.current.resume();
-      }
+      if (audioCtxRef.current.state === 'suspended') audioCtxRef.current.resume();
 
-      audio.play().then(() => {
-        startVisualizer();
-      }).catch(() => setIsPlaying(false));
-      
+      audio.play().then(() => startVisualizer()).catch(() => {
+        setIsPlaying(false);
+        setIsLoading(false);
+      });
     } else {
       audio.pause();
       stopVisualizer();
@@ -219,222 +287,185 @@ export default function Home() {
   }, []);
 
   const changeRadio = useCallback((index) => {
-    setIsGlitching(true);
     setIsPlaying(false);
+    setIsLoading(true); 
     resetAudio();
     setActiveIndex(index);
-    playSystemBeep(300, 'square', 0.08); // Bip grave de transição
-    setTimeout(() => setIsGlitching(false), 400);
-  }, [resetAudio, playSystemBeep]);
+    playClickSound(); 
+  }, [resetAudio, playClickSound]);
 
   useEffect(() => {
     if (audioRef.current && currentRadio) {
       audioRef.current.src = currentRadio.url;
       audioRef.current.load();
+      if (isPlaying) {
+        audioRef.current.play().catch(() => {});
+      }
     }
-  }, [currentRadio]);
-
-  const handleCommand = (cmdStr) => {
-    const args = cmdStr.toLowerCase().split(' ');
-    const command = args[0];
-    const value = args[1];
-
-    let executed = true;
-
-    switch (command) {
-      case 'play': setIsPlaying(true); break;
-      case 'pause': setIsPlaying(false); break;
-      case 'next': changeRadio(nextIndex); break;
-      case 'prev': changeRadio(previousIndex); break;
-      case 'vol':
-      case 'volume':
-        if (value && !isNaN(value)) setVolume(Math.min(100, Math.max(0, parseInt(value))) / 100);
-        break;
-      case 'favs': 
-        setFilterMode('favs'); 
-        setActiveIndex(0); 
-        break;
-      case 'all': 
-        setFilterMode('all'); 
-        setActiveIndex(0); 
-        break;
-      case 'theme': // NOVO COMANDO NO TERMINAL
-      case 'color':
-        if (THEMES[value]) {
-          setTheme(value);
-          playSystemBeep(600, 'sine', 0.2); // Bip especial de tema
-        } else {
-           console.log("Temas disponíveis: cyan, matrix, amber, purple");
-        }
-        break;
-      default:
-        const foundIndex = displayRadios.findIndex(r => 
-          r.name.toLowerCase().includes(command) || r.genre.toLowerCase().includes(command)
-        );
-        if (foundIndex !== -1) {
-          changeRadio(foundIndex);
-          setIsPlaying(true);
-        } else {
-          executed = false;
-        }
-        break;
-    }
-    
-    // Toca bip sempre que um comando é reconhecido
-    if (executed) playSystemBeep(900, 'square', 0.05);
-  };
+  }, [currentRadio, isPlaying]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === '/') {
-        if (!isTerminalOpen) {
-          e.preventDefault();
-          setIsTerminalOpen(true);
-          playSystemBeep(1500, 'triangle', 0.05); // Bip ao abrir terminal
-        }
-        return;
-      }
-
-      if (isTerminalOpen || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-
       switch (e.code) {
-        case 'Space': e.preventDefault(); setIsPlaying((prev) => !prev); break;
+        case 'Space': e.preventDefault(); togglePlay(); break;
         case 'ArrowRight': e.preventDefault(); changeRadio(nextIndex); break;
         case 'ArrowLeft': e.preventDefault(); changeRadio(previousIndex); break;
         case 'ArrowUp': e.preventDefault(); setVolume((prev) => Math.min(prev + 0.1, 1)); break;
         case 'ArrowDown': e.preventDefault(); setVolume((prev) => Math.max(prev - 0.1, 0)); break;
-        case 'KeyM': e.preventDefault(); setVolume((prev) => (prev > 0 ? 0 : 0.5)); break;
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [nextIndex, previousIndex, changeRadio, isTerminalOpen, playSystemBeep]);
+  }, [nextIndex, previousIndex, changeRadio, togglePlay]); 
 
   useEffect(() => {
     if (!isPlaying) stopVisualizer();
   }, [isPlaying]);
 
   return (
-    <main className={`min-h-screen bg-[#09090b] text-white overflow-hidden flex flex-col items-center justify-center font-mono relative ${activeTheme.selection} selection:text-black`}>
+    <main className="min-h-screen bg-zinc-950 text-white overflow-hidden flex items-center justify-center font-sans relative selection:bg-cyan-500 selection:text-black p-4 md:p-8">
       
-      <SysPanel />
+      <audio 
+        ref={audioRef} 
+        crossOrigin="anonymous" 
+        onWaiting={() => setIsLoading(true)}
+        onLoadStart={() => setIsLoading(true)}
+        onPlaying={() => setIsLoading(false)}
+        onCanPlay={() => setIsLoading(false)}
+        onError={() => setIsLoading(true)} 
+      />
 
-      <div className="pointer-events-none fixed inset-0 z-40 opacity-[0.03] bg-[linear-gradient(rgba(255,255,255,0)_50%,rgba(0,0,0,0.5)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-size-[100%_4px,3px_100%]" />
-
-      <style dangerouslySetInnerHTML={{__html: `
-        @keyframes glitch-anim { 0% { clip-path: inset(10% 0 80% 0); transform: translate(-3px, 2px); filter: drop-shadow(2px 0 0 red) drop-shadow(-2px 0 0 ${activeTheme.color}); } 20% { clip-path: inset(80% 0 5% 0); transform: translate(3px, -2px); filter: drop-shadow(-2px 0 0 red) drop-shadow(2px 0 0 ${activeTheme.color}); } 40% { clip-path: inset(30% 0 50% 0); transform: translate(-3px, 1px); filter: drop-shadow(3px 0 0 red) drop-shadow(-3px 0 0 ${activeTheme.color}); } 60% { clip-path: inset(70% 0 10% 0); transform: translate(2px, -1px); filter: drop-shadow(-3px 0 0 red) drop-shadow(3px 0 0 ${activeTheme.color}); } 80% { clip-path: inset(20% 0 60% 0); transform: translate(-1px, 3px); filter: drop-shadow(2px 0 0 red) drop-shadow(-2px 0 0 ${activeTheme.color}); } 100% { clip-path: inset(50% 0 30% 0); transform: translate(0); filter: none; } }
-        .glitch-effect { animation: glitch-anim 0.4s cubic-bezier(.25, .46, .45, .94) both; }
-        .glitch-text { animation: glitch-anim 0.3s cubic-bezier(.25, .46, .45, .94) both; }
+      {/* CHASSI DO RÁDIO FÍSICO */}
+      <div className="relative w-full max-w-6xl h-162.5 bg-zinc-800 rounded-[2.5rem] p-6 shadow-[0_35px_60px_-15px_rgba(0,0,0,0.8),inset_0_2px_4px_rgba(255,255,255,0.1)] border border-zinc-700 flex flex-col md:flex-row gap-8 overflow-hidden">
         
-        /* Tema dinâmico injetado para o controlo de volume não sofrer com o purge do tailwind */
-        .theme-slider::-webkit-slider-thumb {
-          background-color: ${activeTheme.color} !important;
-          box-shadow: 0 0 8px ${activeTheme.color};
-        }
-      `}} />
+        {/* PARTE ESQUERDA: SPEAKER GRILL + TUNER VERTICAL */}
+        <div className="w-full md:w-5/12 h-full relative rounded-2xl bg-[#1e1e24] shadow-inner overflow-hidden border-4 border-zinc-900 flex flex-col items-center justify-between py-6">
+          
+          <div className="absolute inset-0 bg-[radial-gradient(#000_2px,transparent_2px)] bg-size-[10px_10px] opacity-40 pointer-events-none"></div>
 
-      <audio ref={audioRef} crossOrigin="anonymous" />
+          <button 
+            onClick={() => changeRadio(previousIndex)}
+            className="relative z-10 w-16 h-10 bg-zinc-700 hover:bg-zinc-600 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 flex items-center justify-center transition-all border border-zinc-600"
+          >
+            <ChevronUp size={24} className="text-zinc-300" />
+          </button>
 
-      {/* HEADER RADIO ARCH */}
-      <div className="absolute top-8 text-center z-10 font-sans">
-        <h1 className="text-xl font-black tracking-[0.3em] opacity-40 uppercase italic">
-          RADIO<span className="text-orange-500">ARCH</span>
-        </h1>
-        {filterMode === 'favs' && (
-          <div className={`mt-2 text-[10px] ${activeTheme.textClass} font-mono tracking-widest border border-current px-2 py-1 inline-block opacity-70`}>
-            [ FILTER: FAVORITES ]
+          <div className="relative w-full h-95 flex items-center justify-center">
+            {displayRadios.map((radio, index) => {
+              const isCenter = index === safeIndex;
+              const offset = index - safeIndex;
+              return (
+                <VerticalDeckItem
+                  key={radio.id}
+                  radio={radio}
+                  isCenter={isCenter}
+                  offset={offset}
+                  onSelect={() => {
+                    changeRadio(index);
+                    if (!isPlaying) togglePlay(); 
+                  }}
+                />
+              );
+            })}
           </div>
-        )}
-      </div>
 
-      {/* CONTROLE DE VOLUME LATERAL COM TEMA DINÂMICO */}
-      <div className="absolute right-8 top-1/2 -translate-y-1/2 flex flex-col items-center justify-between h-48 z-50">
-        <span className={`text-[10px] ${activeTheme.textClass} font-mono tracking-widest uppercase px-1 opacity-70`}>
-          Vol
-        </span>
-        
-        <div className="w-8 h-32 flex items-center justify-center">
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            value={volume}
-            onChange={(e) => setVolume(parseFloat(e.target.value))}
-            className="theme-slider w-32 h-1 appearance-none bg-zinc-800 rounded-full outline-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full cursor-pointer -rotate-90 origin-center"
-          />
+          <button 
+            onClick={() => changeRadio(nextIndex)}
+            className="relative z-10 w-16 h-10 bg-zinc-700 hover:bg-zinc-600 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 flex items-center justify-center transition-all border border-zinc-600"
+          >
+            <ChevronDown size={24} className="text-zinc-300" />
+          </button>
         </div>
 
-        <span className="text-[10px] text-zinc-500 font-mono w-8 text-center">
-          {Math.round(volume * 100)}%
-        </span>
-      </div>
+        {/* PARTE DIREITA: LCD SCREEN & CONTROLES FÍSICOS */}
+        <div className="flex-1 h-full flex flex-col justify-between py-4">
+          
+          {/* ECRÃ LCD */}
+          <div className="w-full h-56 bg-[#050505] rounded-xl border-[6px] border-zinc-900 shadow-[inset_0_0_20px_rgba(0,0,0,1)] relative flex flex-col p-6 overflow-hidden">
+            <div className="absolute inset-0 bg-linear-to-tr from-transparent via-white/5 to-transparent pointer-events-none"></div>
+            
+            <div className="flex justify-between items-start w-full">
+              <h1 className="text-lg font-black tracking-[0.3em] opacity-60 uppercase italic font-mono">
+                RADIO<span className="text-orange-500">ARCH</span>
+              </h1>
+              <span className={`${isPlaying && isLoading ? 'text-yellow-400' : 'text-cyan-400'} text-xs font-mono font-bold animate-pulse`}>
+                {isPlaying ? (isLoading ? 'TUNING...' : 'ON AIR') : 'STANDBY'}
+              </span>
+            </div>
 
-      {/* DECK DE RADIOS */}
-      <div className="relative w-full h-100 flex items-center justify-center overflow-visible z-10">
-        <button
-          onClick={() => changeRadio(previousIndex)}
-          className={`absolute left-6 z-50 p-4 text-zinc-700 hover:${activeTheme.textClass} transition-colors`}
-        >
-          <ChevronLeft size={48} strokeWidth={1} />
-        </button>
+            <div className="flex-1 flex flex-col justify-center items-center mt-4">
+              <canvas ref={canvasRef} width={280} height={50} className="mb-4" />
+              
+              <h2 className="text-2xl font-bold text-white tracking-wider text-center line-clamp-1">
+                {currentRadio?.name}
+              </h2>
+              <p className="text-cyan-400 text-xs mt-2 font-medium tracking-[0.3em] uppercase font-mono">
+                [{currentRadio?.genre}]
+              </p>
+            </div>
+          </div>
 
-        <div className="relative flex items-center justify-center w-full max-w-7xl">
-          {displayRadios.map((radio, index) => {
-            const isCenter = index === safeIndex;
-            const offset = index - safeIndex;
+          {/* PAINEL DE BOTÕES FÍSICOS */}
+          <div className="grid grid-cols-2 gap-8 mt-8 px-4">
+            
+            <button 
+              onClick={togglePlay}
+              className="h-20 bg-zinc-700 rounded-xl shadow-[0_6px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1.5 transition-all flex flex-col items-center justify-center gap-2 border border-zinc-600 group"
+            >
+              {isPlaying ? <Square size={26} className="text-cyan-400" /> : <Play size={26} className="text-zinc-300 group-hover:text-white" />}
+              <span className="text-[11px] font-bold tracking-widest uppercase text-zinc-400">Power</span>
+            </button>
 
-            return (
-              <RadioDeckItem
-                key={radio.id}
-                radio={radio}
-                isCenter={isCenter}
-                offset={offset}
-                onSelect={() => changeRadio(index)}
-                isGlitching={isGlitching}
+            <button 
+              onClick={() => { handleToggleFavorite(); playClickSound(); }}
+              className="h-20 bg-zinc-700 rounded-xl shadow-[0_6px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1.5 transition-all flex flex-col items-center justify-center gap-2 border border-zinc-600 group"
+            >
+              <Heart size={26} className={favorites.includes(currentRadio?.id) ? 'text-red-500 fill-red-500' : 'text-zinc-300 group-hover:text-white'} />
+              <span className="text-[11px] font-bold tracking-widest uppercase text-zinc-400">Favorito</span>
+            </button>
+
+          </div>
+
+          {/* SLIDER DE VOLUME MECÂNICO */}
+          <div className="mt-8 bg-zinc-900 rounded-xl p-5 border-2 border-zinc-950 shadow-inner flex items-center gap-6">
+            <span className="text-xs font-mono font-bold text-zinc-500">MIN</span>
+            
+            <div className="relative flex-1 h-3 bg-black rounded-full shadow-inner flex items-center">
+              <style dangerouslySetInnerHTML={{__html: `
+                .fader-thumb::-webkit-slider-thumb {
+                  appearance: none;
+                  width: 28px;
+                  height: 40px;
+                  background: #52525b;
+                  border: 2px solid #27272a;
+                  border-radius: 4px;
+                  cursor: grab;
+                  box-shadow: 0 4px 6px rgba(0,0,0,0.5), inset 0 2px 0 rgba(255,255,255,0.2);
+                }
+                .fader-thumb::-webkit-slider-thumb:active { cursor: grabbing; }
+              `}} />
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                value={volume}
+                onChange={(e) => setVolume(parseFloat(e.target.value))}
+                className="fader-thumb absolute w-full h-full appearance-none bg-transparent outline-none z-10"
               />
-            );
-          })}
+              <div className="h-full rounded-full transition-all bg-cyan-400 opacity-60" style={{ width: `${volume * 100}%` }}></div>
+            </div>
+
+            <span className="text-xs font-mono font-bold text-zinc-500">MAX</span>
+          </div>
+
         </div>
-
-        <button
-          onClick={() => changeRadio(nextIndex)}
-          className={`absolute right-6 z-50 p-4 text-zinc-700 hover:${activeTheme.textClass} transition-colors`}
-        >
-          <ChevronRight size={48} strokeWidth={1} />
-        </button>
       </div>
-
-      {/* NOME DA RADIO E EQUALIZADOR */}
-      <div className={`absolute bottom-32 text-center z-10 transition-opacity flex flex-col items-center ${isGlitching ? 'glitch-text opacity-70' : 'opacity-100'}`}>
-        
-        <canvas 
-          ref={canvasRef} 
-          width={180} 
-          height={40} 
-          className="mb-4"
-        />
-
-        <h2 className="text-2xl font-bold text-white tracking-wider">{currentRadio?.name}</h2>
-        <p className={`${activeTheme.textClass} text-xs mt-2 font-medium tracking-[0.3em] uppercase transition-colors`}>[{currentRadio?.genre}]</p>
+      
+      <div className="hidden">
+        <Player currentRadio={currentRadio} isPlaying={isPlaying} onPlayPause={() => setIsPlaying(!isPlaying)} volume={volume} onVolumeChange={setVolume} isFavorite={favorites.includes(currentRadio?.id)} toggleFavorite={handleToggleFavorite} />
       </div>
-
-      <TerminalCLI 
-        isOpen={isTerminalOpen} 
-        onClose={() => setIsTerminalOpen(false)} 
-        onCommand={handleCommand}
-      />
-
-      <Player 
-        currentRadio={currentRadio} 
-        isPlaying={isPlaying} 
-        onPlayPause={() => setIsPlaying(!isPlaying)}
-        volume={volume}
-        onVolumeChange={setVolume}
-        isFavorite={favorites.includes(currentRadio?.id)}
-        toggleFavorite={handleToggleFavorite}
-      />
     </main>
   );
 }
