@@ -2,10 +2,9 @@
 
 import Player from '@/components/Player';
 import { radioList } from '@/data/radios';
-import { ChevronDown, ChevronUp, Heart, Play, Square } from 'lucide-react';
+import { ChevronDown, ChevronUp, Disc, Heart, Play, Square } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-// Espaçamento ligeiramente aumentado para acomodar as logos maiores
 const VERTICAL_SPACING = 180; 
 const LCD_COLOR = '#22d3ee'; 
 
@@ -23,7 +22,6 @@ function VerticalDeckItem({ radio, isCenter, offset, onSelect }) {
         filter: isCenter ? 'none' : 'grayscale(80%) brightness(40%)',
       }}
     >
-      {/* Logos aumentadas: de w-56 h-32 para w-64 h-40 */}
       <div className={`transition-all duration-500 w-64 h-40 flex items-center justify-center ${isCenter ? 'drop-shadow-[0_0_15px_rgba(34,211,238,0.5)] scale-110' : 'drop-shadow-md'}`}>
         {radio.logo ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -51,6 +49,8 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [volume, setVolume] = useState(0.5);
   const [favorites, setFavorites] = useState([]);
+  const [currentTime, setCurrentTime] = useState('--:--'); 
+  const [isLofiMode, setIsLofiMode] = useState(false); // NOVO: Estado do Modo Vinil/Cassete
   
   const audioRef = useRef(null);
   const canvasRef = useRef(null);
@@ -59,8 +59,18 @@ export default function Home() {
   const sourceRef = useRef(null);
   const requestRef = useRef(null);
   const noiseNodeRef = useRef(null); 
+  const lofiFilterRef = useRef(null); // NOVO: Referência para o filtro passa-baixo
 
-  // SOM DE CLIQUE MECÂNICO
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      setCurrentTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+    };
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   const playClickSound = useCallback(() => {
     try {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -84,7 +94,6 @@ export default function Home() {
     } catch (e) {}
   }, []);
 
-  // SOM DE BIPE PARA FAVORITOS
   const playSystemBeep = useCallback((freq = 800, type = 'square', duration = 0.05) => {
     try {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -105,7 +114,6 @@ export default function Home() {
     } catch (e) {}
   }, []);
 
-  // GERADOR DE ESTÁTICA
   const startTuningSound = useCallback(() => {
     try {
       if (noiseNodeRef.current) return; 
@@ -158,10 +166,12 @@ export default function Home() {
       const savedIndex = localStorage.getItem('radioarch_index');
       const savedVolume = localStorage.getItem('radioarch_volume');
       const savedFavs = localStorage.getItem('radioarch_favs');
+      const savedLofi = localStorage.getItem('radioarch_lofi');
       
       if (savedIndex !== null) setActiveIndex(parseInt(savedIndex, 10));
       if (savedVolume !== null) setVolume(parseFloat(savedVolume));
       if (savedFavs) setFavorites(JSON.parse(savedFavs));
+      if (savedLofi !== null) setIsLofiMode(savedLofi === 'true');
     }, 0);
 
     return () => cancelAnimationFrame(requestRef.current);
@@ -173,6 +183,20 @@ export default function Home() {
     if (audioRef.current) audioRef.current.volume = volume;
   }, [volume]);
   useEffect(() => { localStorage.setItem('radioarch_favs', JSON.stringify(favorites)); }, [favorites]);
+  useEffect(() => { localStorage.setItem('radioarch_lofi', isLofiMode.toString()); }, [isLofiMode]);
+
+  // NOVO: Aplica o filtro de áudio Lo-Fi em tempo real
+  useEffect(() => {
+    if (lofiFilterRef.current && audioCtxRef.current) {
+      if (isLofiMode) {
+        // Corta os agudos (Filtro Passa-Baixo a 1200Hz) - Som abafado
+        lofiFilterRef.current.frequency.setTargetAtTime(1200, audioCtxRef.current.currentTime, 0.5);
+      } else {
+        // Deixa passar tudo (24000Hz) - Som limpo e normal
+        lofiFilterRef.current.frequency.setTargetAtTime(24000, audioCtxRef.current.currentTime, 0.5);
+      }
+    }
+  }, [isLofiMode]);
 
   useEffect(() => {
     if (isPlaying && isLoading) {
@@ -197,6 +221,11 @@ export default function Home() {
         : [...prev, currentRadio.id]
     );
     playSystemBeep(1200, 'sine', 0.1); 
+  };
+
+  const toggleLofiMode = () => {
+    setIsLofiMode(!isLofiMode);
+    playSystemBeep(1500, 'triangle', 0.1); // Som metálico
   };
 
   const startVisualizer = () => {
@@ -263,8 +292,16 @@ export default function Home() {
         analyserRef.current = audioCtxRef.current.createAnalyser();
         analyserRef.current.fftSize = 64; 
         
+        // NOVO: Setup do filtro Lo-Fi
+        lofiFilterRef.current = audioCtxRef.current.createBiquadFilter();
+        lofiFilterRef.current.type = 'lowpass';
+        lofiFilterRef.current.frequency.value = isLofiMode ? 1200 : 24000;
+
         sourceRef.current = audioCtxRef.current.createMediaElementSource(audio);
-        sourceRef.current.connect(analyserRef.current);
+        
+        // Cadeia de áudio: Fonte -> Filtro Lo-Fi -> Analisador Visual -> Saída
+        sourceRef.current.connect(lofiFilterRef.current);
+        lofiFilterRef.current.connect(analyserRef.current);
         analyserRef.current.connect(audioCtxRef.current.destination);
       }
       if (audioCtxRef.current.state === 'suspended') audioCtxRef.current.resume();
@@ -277,7 +314,8 @@ export default function Home() {
       audio.pause();
       stopVisualizer();
     }
-  }, [isPlaying, currentRadio]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPlaying, currentRadio]); // ignoramos isLofiMode aqui para não recriar os nós de áudio, tratamos isso noutro useEffect
 
   const resetAudio = useCallback(() => {
     if (audioRef.current) {
@@ -385,16 +423,26 @@ export default function Home() {
           <div className="w-full h-56 bg-[#050505] rounded-xl border-[6px] border-zinc-900 shadow-[inset_0_0_20px_rgba(0,0,0,1)] relative flex flex-col p-6 overflow-hidden">
             <div className="absolute inset-0 bg-linear-to-tr from-transparent via-white/5 to-transparent pointer-events-none"></div>
             
-            <div className="flex justify-between items-start w-full">
-              <h1 className="text-lg font-black tracking-[0.3em] opacity-60 uppercase italic font-mono">
-                RADIO<span className="text-orange-500">ARCH</span>
+            <div className="flex justify-between items-start w-full relative z-10">
+              <h1 className="text-lg font-black tracking-[0.3em] opacity-60 uppercase italic font-mono flex flex-col gap-1">
+                <span>RADIO<span className="text-orange-500">ARCH</span></span>
+                {/* INDICADOR DO MODO LO-FI NO LCD */}
+                <span className={`text-[9px] tracking-widest ${isLofiMode ? 'text-amber-500 animate-pulse' : 'text-zinc-800'}`}>
+                  [VINYL FX]
+                </span>
               </h1>
-              <span className={`${isPlaying && isLoading ? 'text-yellow-400' : 'text-cyan-400'} text-xs font-mono font-bold animate-pulse`}>
-                {isPlaying ? (isLoading ? 'TUNING...' : 'ON AIR') : 'STANDBY'}
-              </span>
+              
+              <div className="flex flex-col items-end">
+                <span className="text-cyan-400 text-lg font-mono font-bold tracking-widest opacity-80 mb-1">
+                  {currentTime}
+                </span>
+                <span className={`${isPlaying && isLoading ? 'text-yellow-400' : 'text-cyan-400'} text-xs font-mono font-bold animate-pulse`}>
+                  {isPlaying ? (isLoading ? 'TUNING...' : 'ON AIR') : 'STANDBY'}
+                </span>
+              </div>
             </div>
 
-            <div className="flex-1 flex flex-col justify-center items-center mt-4">
+            <div className="flex-1 flex flex-col justify-center items-center mt-2 relative z-10">
               <canvas ref={canvasRef} width={280} height={50} className="mb-4" />
               
               <h2 className="text-2xl font-bold text-white tracking-wider text-center line-clamp-1">
@@ -406,23 +454,32 @@ export default function Home() {
             </div>
           </div>
 
-          {/* PAINEL DE BOTÕES FÍSICOS */}
-          <div className="grid grid-cols-2 gap-8 mt-8 px-4">
+          {/* PAINEL DE BOTÕES FÍSICOS (Atualizado para 3 botões) */}
+          <div className="grid grid-cols-3 gap-6 mt-8 px-4">
             
             <button 
               onClick={togglePlay}
               className="h-20 bg-zinc-700 rounded-xl shadow-[0_6px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1.5 transition-all flex flex-col items-center justify-center gap-2 border border-zinc-600 group"
             >
-              {isPlaying ? <Square size={26} className="text-cyan-400" /> : <Play size={26} className="text-zinc-300 group-hover:text-white" />}
-              <span className="text-[11px] font-bold tracking-widest uppercase text-zinc-400">Power</span>
+              {isPlaying ? <Square size={24} className="text-cyan-400" /> : <Play size={24} className="text-zinc-300 group-hover:text-white" />}
+              <span className="text-[10px] font-bold tracking-widest uppercase text-zinc-400">Power</span>
             </button>
 
             <button 
               onClick={() => { handleToggleFavorite(); playClickSound(); }}
               className="h-20 bg-zinc-700 rounded-xl shadow-[0_6px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1.5 transition-all flex flex-col items-center justify-center gap-2 border border-zinc-600 group"
             >
-              <Heart size={26} className={favorites.includes(currentRadio?.id) ? 'text-red-500 fill-red-500' : 'text-zinc-300 group-hover:text-white'} />
-              <span className="text-[11px] font-bold tracking-widest uppercase text-zinc-400">Favorito</span>
+              <Heart size={24} className={favorites.includes(currentRadio?.id) ? 'text-red-500 fill-red-500' : 'text-zinc-300 group-hover:text-white'} />
+              <span className="text-[10px] font-bold tracking-widest uppercase text-zinc-400">Favorito</span>
+            </button>
+
+            {/* NOVO: BOTÃO DO MODO VINIL */}
+            <button 
+              onClick={toggleLofiMode}
+              className={`h-20 rounded-xl shadow-[0_6px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1.5 transition-all flex flex-col items-center justify-center gap-2 border border-zinc-600 group ${isLofiMode ? 'bg-amber-900/50' : 'bg-zinc-700'}`}
+            >
+              <Disc size={24} className={isLofiMode ? 'text-amber-500 animate-spin-slow' : 'text-zinc-300 group-hover:text-white'} style={{ animationDuration: '4s' }} />
+              <span className={`text-[10px] font-bold tracking-widest uppercase ${isLofiMode ? 'text-amber-500' : 'text-zinc-400'}`}>Lo-Fi FX</span>
             </button>
 
           </div>
