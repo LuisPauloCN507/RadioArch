@@ -2,11 +2,40 @@
 
 import Player from '@/components/Player';
 import { radioList } from '@/data/radios';
-import { ChevronDown, ChevronUp, Code2, Cpu, Disc, Headphones, Heart, Info, Layers, Lightbulb, Play, Radio, Square, Timer, Volume2, VolumeX } from 'lucide-react';
+import { ChevronDown, ChevronUp, Heart, Play, Square, Timer, Volume2, VolumeX, Info, Radio, Lightbulb, Code2, Cpu, Layers, MapPin, RadioReceiver, Disc, Headphones } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 const VERTICAL_SPACING = 180; 
 
+// COMPONENTE DE ANIMAÇÃO NO SCROLL
+function FadeInSection({ children, delay = 0 }) {
+  const domRef = useRef();
+  const [isVisible, setVisible] = useState(false);
+  
+  useEffect(() => {
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) setVisible(true);
+      });
+    }, { threshold: 0.1 });
+    
+    const currentRef = domRef.current;
+    if (currentRef) observer.observe(currentRef);
+    return () => { if (currentRef) observer.unobserve(currentRef); };
+  }, []);
+  
+  return (
+    <div 
+      ref={domRef} 
+      className={`transition-all duration-1000 ease-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'}`} 
+      style={{ transitionDelay: `${delay}ms` }}
+    >
+      {children}
+    </div>
+  );
+}
+
+// COMPONENTE DO COVER FLOW VERTICAL
 function VerticalDeckItem({ radio, isCenter, offset, onSelect }) {
   const isVisible = Math.abs(offset) <= 2;
   
@@ -49,15 +78,10 @@ export default function Home() {
   const [favorites, setFavorites] = useState([]);
   const [currentTime, setCurrentTime] = useState('--:--'); 
   
-  const [isLofiMode, setIsLofiMode] = useState(false); 
   const [sleepTimer, setSleepTimer] = useState(0); 
   const [timeLeft, setTimeLeft] = useState(0); 
   const [isMuted, setIsMuted] = useState(false);
   const [displayMode, setDisplayMode] = useState(false);
-  
-  const [presets, setPresets] = useState({ 1: null, 2: null, 3: null });
-  const [bass, setBass] = useState(0); 
-  const [treble, setTreble] = useState(0); 
   const [band, setBand] = useState('FM'); 
   const [backlight, setBacklight] = useState(true);
   
@@ -69,11 +93,7 @@ export default function Home() {
   const requestRef = useRef(null);
   const noiseNodeRef = useRef(null); 
   
-  const lofiFilterRef = useRef(null); 
   const amFilterRef = useRef(null);
-  const bassFilterRef = useRef(null);
-  const trebleFilterRef = useRef(null);
-  const pressTimerRef = useRef(null);
   
   const lcdColor = backlight ? '#22d3ee' : '#1e3a8a';
   const lcdColorRef = useRef(lcdColor);
@@ -218,26 +238,6 @@ export default function Home() {
     playClickSound();
   }, [playClickSound]);
 
-  const handlePresetDown = (slot) => {
-    pressTimerRef.current = setTimeout(() => {
-      setPresets(prev => ({ ...prev, [slot]: activeIndex }));
-      playSystemBeep(2000, 'sine', 0.1); 
-      pressTimerRef.current = null;
-    }, 1000); 
-  };
-
-  const handlePresetUp = (slot) => {
-    if (pressTimerRef.current) {
-      clearTimeout(pressTimerRef.current);
-      pressTimerRef.current = null;
-      if (presets[slot] !== null && presets[slot] !== undefined) {
-        changeRadio(presets[slot]);
-      } else {
-        playSystemBeep(200, 'square', 0.1);
-      }
-    }
-  };
-
   const displayRadios = radioList;
 
   useEffect(() => {
@@ -245,14 +245,10 @@ export default function Home() {
       const savedIndex = localStorage.getItem('radioarch_index');
       const savedVolume = localStorage.getItem('radioarch_volume');
       const savedFavs = localStorage.getItem('radioarch_favs');
-      const savedLofi = localStorage.getItem('radioarch_lofi');
-      const savedPresets = localStorage.getItem('radioarch_presets');
       
       if (savedIndex !== null) setActiveIndex(parseInt(savedIndex, 10));
       if (savedVolume !== null) setVolume(parseFloat(savedVolume));
       if (savedFavs) setFavorites(JSON.parse(savedFavs));
-      if (savedLofi !== null) setIsLofiMode(savedLofi === 'true');
-      if (savedPresets) setPresets(JSON.parse(savedPresets));
     }, 0);
     return () => cancelAnimationFrame(requestRef.current);
   }, []);
@@ -263,26 +259,13 @@ export default function Home() {
     if (audioRef.current) audioRef.current.volume = isMuted ? 0 : volume;
   }, [volume, isMuted]);
   useEffect(() => { localStorage.setItem('radioarch_favs', JSON.stringify(favorites)); }, [favorites]);
-  useEffect(() => { localStorage.setItem('radioarch_lofi', isLofiMode.toString()); }, [isLofiMode]);
-  useEffect(() => { localStorage.setItem('radioarch_presets', JSON.stringify(presets)); }, [presets]);
 
   useEffect(() => {
-    if (audioCtxRef.current) {
-      if (lofiFilterRef.current) {
-        lofiFilterRef.current.frequency.setTargetAtTime(isLofiMode ? 1200 : 24000, audioCtxRef.current.currentTime, 0.5);
-      }
-      if (amFilterRef.current) {
-        amFilterRef.current.type = band === 'AM' ? 'bandpass' : 'allpass';
-        if (band === 'AM') amFilterRef.current.frequency.setValueAtTime(1500, audioCtxRef.current.currentTime);
-      }
-      if (bassFilterRef.current) {
-        bassFilterRef.current.gain.setTargetAtTime(bass, audioCtxRef.current.currentTime, 0.1);
-      }
-      if (trebleFilterRef.current) {
-        trebleFilterRef.current.gain.setTargetAtTime(treble, audioCtxRef.current.currentTime, 0.1);
-      }
+    if (audioCtxRef.current && amFilterRef.current) {
+      amFilterRef.current.type = band === 'AM' ? 'bandpass' : 'allpass';
+      if (band === 'AM') amFilterRef.current.frequency.setValueAtTime(1500, audioCtxRef.current.currentTime);
     }
-  }, [isLofiMode, band, bass, treble]);
+  }, [band]);
 
   useEffect(() => {
     if (isPlaying && isLoading) startTuningSound();
@@ -303,11 +286,6 @@ export default function Home() {
     );
     playSystemBeep(1200, 'sine', 0.1); 
   }, [currentRadio, playSystemBeep]);
-
-  const toggleLofiMode = useCallback(() => {
-    setIsLofiMode((prev) => !prev);
-    playSystemBeep(1500, 'triangle', 0.1); 
-  }, [playSystemBeep]);
 
   const startVisualizer = useCallback(() => {
     if (!canvasRef.current || !analyserRef.current) return;
@@ -370,22 +348,11 @@ export default function Home() {
         analyserRef.current = audioCtxRef.current.createAnalyser();
         analyserRef.current.fftSize = 64; 
         
-        lofiFilterRef.current = audioCtxRef.current.createBiquadFilter();
-        lofiFilterRef.current.type = 'lowpass';
         amFilterRef.current = audioCtxRef.current.createBiquadFilter();
-        bassFilterRef.current = audioCtxRef.current.createBiquadFilter();
-        bassFilterRef.current.type = 'lowshelf';
-        bassFilterRef.current.frequency.value = 250;
-        trebleFilterRef.current = audioCtxRef.current.createBiquadFilter();
-        trebleFilterRef.current.type = 'highshelf';
-        trebleFilterRef.current.frequency.value = 4000;
 
         sourceRef.current = audioCtxRef.current.createMediaElementSource(audio);
-        sourceRef.current.connect(lofiFilterRef.current);
-        lofiFilterRef.current.connect(amFilterRef.current);
-        amFilterRef.current.connect(bassFilterRef.current);
-        bassFilterRef.current.connect(trebleFilterRef.current);
-        trebleFilterRef.current.connect(analyserRef.current);
+        sourceRef.current.connect(amFilterRef.current);
+        amFilterRef.current.connect(analyserRef.current);
         analyserRef.current.connect(audioCtxRef.current.destination);
       }
       if (audioCtxRef.current.state === 'suspended') audioCtxRef.current.resume();
@@ -451,269 +418,264 @@ export default function Home() {
         onError={() => setIsLoading(true)} 
       />
 
-      {/* NAVBAR */}
       <nav className="fixed top-0 w-full z-50 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-900/50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Radio className="text-cyan-400" size={24} />
+            <RadioReceiver className="text-cyan-400" size={24} />
             <span className="font-mono font-bold tracking-widest uppercase text-lg">
               RADIO<span className="text-orange-500">ARCH</span>
             </span>
           </div>
           <div className="hidden md:flex gap-8 text-sm font-medium text-zinc-400">
             <a href="#app" className="hover:text-cyan-400 transition-colors">Player</a>
-            <a href="#features" className="hover:text-cyan-400 transition-colors">Features</a>
-            <a href="#tech" className="hover:text-cyan-400 transition-colors">Tech Stack</a>
+            <a href="#stations" className="hover:text-cyan-400 transition-colors">Estações</a>
+            <a href="#guide" className="hover:text-cyan-400 transition-colors">Guia</a>
+            <a href="#developer" className="hover:text-cyan-400 transition-colors">Dev</a>
           </div>
           <button onClick={() => { document.getElementById('app').scrollIntoView({ behavior: 'smooth' }); }} className="bg-cyan-500 hover:bg-cyan-400 text-black px-4 py-2 rounded-md font-bold text-sm transition-colors shadow-[0_0_15px_rgba(34,211,238,0.3)]">
-            Listen Now
+            Sintonizar
           </button>
         </div>
       </nav>
 
-      {/* HERO & INTERACTIVE APP SECTION */}
       <section id="app" className="pt-32 pb-24 px-4 md:px-8 flex flex-col items-center justify-center min-h-screen relative">
-        
-        {/* Glow de fundo da página */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-200 h-150 bg-cyan-900/20 blur-[120px] rounded-full pointer-events-none"></div>
 
-        <div className="text-center mb-16 relative z-10">
-          <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-transparent bg-clip-text bg-linear-to-br from-white via-zinc-200 to-zinc-500 mb-6">
-            O Som Analógico <br className="hidden md:block" /> na Era Digital.
-          </h1>
-          <p className="text-zinc-400 text-lg md:text-xl max-w-2xl mx-auto font-light">
-            Radio Arch é um simulador físico de rádio web construído para devs. Sintoniza a tua rádio, ajusta o equalizador e ativa o filtro de Vinil em tempo real.
-          </p>
-        </div>
+        <FadeInSection>
+          <div className="text-center mb-12 relative z-10">
+            <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-transparent bg-clip-text bg-linear-to-br from-white via-zinc-200 to-zinc-500 mb-6">
+              A Frequência Perfeita <br className="hidden md:block" /> para o Teu Flow.
+            </h1>
+            <p className="text-zinc-400 text-lg md:text-xl max-w-2xl mx-auto font-light">
+              Uma interface limpa e focada. Roda o painel, sente o feedback tátil e mergulha num reprodutor minimalista desenvolvido com a máxima performance.
+            </p>
+          </div>
+        </FadeInSection>
 
-        {/* CHASSI DO RÁDIO */}
-        <div className="relative w-full max-w-6xl h-175 bg-zinc-800 rounded-[2.5rem] p-6 shadow-[0_35px_60px_-15px_rgba(0,0,0,0.8),inset_0_2px_4px_rgba(255,255,255,0.1)] border border-zinc-700 flex flex-col md:flex-row gap-8 z-10">
-          
-          <div className="w-full md:w-5/12 h-full relative rounded-2xl bg-[#1e1e24] shadow-inner overflow-hidden border-4 border-zinc-900 flex flex-col items-center justify-between py-6">
-            <div className="absolute inset-0 bg-[radial-gradient(#000_2px,transparent_2px)] bg-size-[10px_10px] opacity-40 pointer-events-none"></div>
-
-            <button 
-              onClick={() => changeRadio(previousIndex)}
-              className="relative z-10 w-16 h-10 bg-zinc-700 hover:bg-zinc-600 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 flex items-center justify-center transition-all border border-zinc-600"
-            >
-              <ChevronUp size={24} className="text-zinc-300" />
-            </button>
-
-            <div className="relative w-full h-95 flex items-center justify-center">
-              {displayRadios.map((radio, index) => {
-                const isCenter = index === safeIndex;
-                const offset = index - safeIndex;
-                return (
-                  <VerticalDeckItem key={radio.id} radio={radio} isCenter={isCenter} offset={offset} onSelect={() => { changeRadio(index); if (!isPlaying) togglePlay(); }} />
-                );
-              })}
+        <FadeInSection delay={200}>
+          <div className="relative w-full max-w-5xl h-150 bg-zinc-800 rounded-[2.5rem] p-6 shadow-[0_35px_60px_-15px_rgba(0,0,0,0.8),inset_0_2px_4px_rgba(255,255,255,0.1)] border border-zinc-700 flex flex-col md:flex-row gap-8 z-10 mx-auto">
+            
+            <div className="w-full md:w-5/12 h-full relative rounded-2xl bg-[#1e1e24] shadow-inner overflow-hidden border-4 border-zinc-900 flex flex-col items-center justify-between py-6">
+              <div className="absolute inset-0 bg-[radial-gradient(#000_2px,transparent_2px)] bg-size-[10px_10px] opacity-40 pointer-events-none"></div>
+              <button onClick={() => changeRadio(previousIndex)} className="relative z-10 w-16 h-10 bg-zinc-700 hover:bg-zinc-600 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 flex items-center justify-center transition-all border border-zinc-600">
+                <ChevronUp size={24} className="text-zinc-300" />
+              </button>
+              <div className="relative w-full h-95 flex items-center justify-center">
+                {displayRadios.map((radio, index) => {
+                  const isCenter = index === safeIndex;
+                  const offset = index - safeIndex;
+                  return (
+                    <VerticalDeckItem key={radio.id} radio={radio} isCenter={isCenter} offset={offset} onSelect={() => { changeRadio(index); if (!isPlaying) togglePlay(); }} />
+                  );
+                })}
+              </div>
+              <button onClick={() => changeRadio(nextIndex)} className="relative z-10 w-16 h-10 bg-zinc-700 hover:bg-zinc-600 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 flex items-center justify-center transition-all border border-zinc-600">
+                <ChevronDown size={24} className="text-zinc-300" />
+              </button>
             </div>
 
-            <button 
-              onClick={() => changeRadio(nextIndex)}
-              className="relative z-10 w-16 h-10 bg-zinc-700 hover:bg-zinc-600 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 flex items-center justify-center transition-all border border-zinc-600"
-            >
-              <ChevronDown size={24} className="text-zinc-300" />
-            </button>
-          </div>
-
-          <div className="flex-1 h-full flex flex-col justify-between py-4">
-            
-            <div className="w-full h-56 bg-[#050505] rounded-xl border-[6px] border-zinc-900 shadow-[inset_0_0_20px_rgba(0,0,0,1)] relative flex flex-col p-6 overflow-hidden">
-              <div className={`absolute inset-0 bg-linear-to-tr from-transparent via-white/5 to-transparent pointer-events-none transition-opacity ${backlight ? 'opacity-100' : 'opacity-20'}`}></div>
+            <div className="flex-1 h-full flex flex-col justify-between py-2">
               
-              <div className="flex justify-between items-start w-full relative z-10">
-                <div className="flex flex-col gap-1">
-                  <h1 className={`text-lg font-black tracking-[0.3em] uppercase italic font-mono flex items-center gap-4 transition-all ${backlight ? 'opacity-60 text-white' : 'opacity-30 text-zinc-600'}`}>
-                    <span>RADIO<span className={backlight ? 'text-orange-500' : 'text-orange-900'}>ARCH</span></span>
-                  </h1>
-                  <div className="flex gap-2 font-mono text-[9px] tracking-widest font-bold">
-                    <span className={`${band === 'AM' ? 'text-amber-500' : 'text-zinc-800'}`}>[AM]</span>
-                    <span className={`${band === 'FM' ? 'text-cyan-400' : 'text-zinc-800'}`}>[FM]</span>
-                    <span className={`${isLofiMode ? 'text-amber-500 animate-pulse' : 'text-zinc-800'}`}>[VINYL FX]</span>
-                    <span className={`${isMuted ? 'text-red-500 animate-pulse' : 'text-zinc-800'}`}>[MUTED]</span>
-                  </div>
-                </div>
+              <div className="w-full h-56 bg-[#050505] rounded-xl border-[6px] border-zinc-900 shadow-[inset_0_0_20px_rgba(0,0,0,1)] relative flex flex-col p-6 overflow-hidden">
+                <div className={`absolute inset-0 bg-linear-to-tr from-transparent via-white/5 to-transparent pointer-events-none transition-opacity ${backlight ? 'opacity-100' : 'opacity-20'}`}></div>
                 
-                <div className="flex flex-col items-end transition-colors" style={{ color: lcdColor }}>
-                  <div className="flex items-center gap-3 mb-1">
-                    {sleepTimer > 0 && <span className="text-zinc-500 text-[10px] font-mono tracking-widest">⏱ {formatTime(timeLeft)}</span>}
-                    <span className={`text-lg font-mono font-bold tracking-widest ${backlight ? 'drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]' : ''}`}>
-                      {currentTime}
+                <div className="flex justify-between items-start w-full relative z-10">
+                  <div className="flex flex-col gap-1">
+                    <h1 className={`text-lg font-black tracking-[0.3em] uppercase italic font-mono flex items-center gap-4 transition-all ${backlight ? 'opacity-60 text-white' : 'opacity-30 text-zinc-600'}`}>
+                      <span>RADIO<span className={backlight ? 'text-orange-500' : 'text-orange-900'}>ARCH</span></span>
+                    </h1>
+                    <div className="flex gap-2 font-mono text-[9px] tracking-widest font-bold">
+                      <span className={`${band === 'AM' ? 'text-amber-500' : 'text-zinc-800'}`}>[AM]</span>
+                      <span className={`${band === 'FM' ? 'text-cyan-400' : 'text-zinc-800'}`}>[FM]</span>
+                      <span className={`${isMuted ? 'text-red-500 animate-pulse' : 'text-zinc-800'}`}>[MUTED]</span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-col items-end transition-colors" style={{ color: lcdColor }}>
+                    <div className="flex items-center gap-3 mb-1">
+                      {sleepTimer > 0 && <span className="text-zinc-500 text-[10px] font-mono tracking-widest">⏱ {formatTime(timeLeft)}</span>}
+                      <span className={`text-lg font-mono font-bold tracking-widest ${backlight ? 'drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]' : ''}`}>
+                        {currentTime}
+                      </span>
+                    </div>
+                    <span className={`${isPlaying && isLoading ? (backlight ? 'text-yellow-400' : 'text-yellow-700') : ''} text-xs font-mono font-bold animate-pulse`}>
+                      {isPlaying ? (isLoading ? 'TUNING...' : 'ON AIR') : 'STANDBY'}
                     </span>
                   </div>
-                  <span className={`${isPlaying && isLoading ? (backlight ? 'text-yellow-400' : 'text-yellow-700') : ''} text-xs font-mono font-bold animate-pulse`}>
-                    {isPlaying ? (isLoading ? 'TUNING...' : 'ON AIR') : 'STANDBY'}
-                  </span>
+                </div>
+
+                <div className="flex-1 flex flex-col justify-center items-center mt-2 relative z-10">
+                  <canvas ref={canvasRef} width={280} height={50} className={displayMode ? 'hidden' : 'mb-4'} />
+                  
+                  <div className={displayMode ? 'hidden' : 'flex flex-col items-center transition-colors'} style={{ color: lcdColor }}>
+                    <h2 className={`text-2xl font-bold tracking-wider text-center line-clamp-1 ${backlight ? 'text-white' : 'text-zinc-500'}`}>
+                      {currentRadio?.name}
+                    </h2>
+                    <p className="text-xs mt-2 font-medium tracking-[0.3em] uppercase font-mono">
+                      [{currentRadio?.genre}]
+                    </p>
+                  </div>
+
+                  <div className={`w-full flex flex-col gap-1.5 font-mono text-[10px] opacity-90 transition-colors ${displayMode ? 'block' : 'hidden'}`} style={{ color: lcdColor }}>
+                    <p className={`border-b pb-1 mb-1 font-bold ${backlight ? 'border-cyan-900 text-white' : 'border-zinc-800 text-zinc-400'}`}>SYSTEM DIAGNOSTICS</p>
+                    <p>FREQ: {(88.0 + safeIndex * 2.4).toFixed(1)} MHz</p>
+                    <p>BAND: {band} / RESOLUTION: HQ STREAM</p>
+                    <p>STATUS: {isLoading ? 'SYNCING...' : (isPlaying ? 'ACTIVE' : 'IDLE')}</p>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex-1 flex flex-col justify-center items-center mt-2 relative z-10">
-                <canvas ref={canvasRef} width={280} height={50} className={displayMode ? 'hidden' : 'mb-4'} />
-                
-                <div className={displayMode ? 'hidden' : 'flex flex-col items-center transition-colors'} style={{ color: lcdColor }}>
-                  <h2 className={`text-2xl font-bold tracking-wider text-center line-clamp-1 ${backlight ? 'text-white' : 'text-zinc-500'}`}>
-                    {currentRadio?.name}
-                  </h2>
-                  <p className="text-xs mt-2 font-medium tracking-[0.3em] uppercase font-mono">
-                    [{currentRadio?.genre}]
-                  </p>
-                </div>
-
-                <div className={`w-full flex flex-col gap-1.5 font-mono text-[10px] opacity-90 transition-colors ${displayMode ? 'block' : 'hidden'}`} style={{ color: lcdColor }}>
-                  <p className={`border-b pb-1 mb-1 font-bold ${backlight ? 'border-cyan-900 text-white' : 'border-zinc-800 text-zinc-400'}`}>SYSTEM DIAGNOSTICS</p>
-                  <p>FREQ: {(88.0 + safeIndex * 2.4).toFixed(1)} MHz</p>
-                  <p>BAND: {band} / BASS: {bass}dB / TREB: {treble}dB</p>
-                  <p>STATUS: {isLoading ? 'SYNCING...' : (isPlaying ? 'ACTIVE' : 'IDLE')}</p>
-                  <p>PRESETS: [ {presets[1]!==null?'P1 ':'-- '} {presets[2]!==null?'P2 ':'-- '} {presets[3]!==null?'P3 ':'-- '} ]</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-center gap-4 mt-3">
-              {[1, 2, 3].map(num => (
-                <button 
-                  key={num}
-                  onPointerDown={() => handlePresetDown(num)}
-                  onPointerUp={() => handlePresetUp(num)}
-                  onPointerLeave={() => { if(pressTimerRef.current) { clearTimeout(pressTimerRef.current); pressTimerRef.current = null; } }}
-                  className={`w-12 h-6 rounded border-b-2 bg-zinc-800 border-zinc-950 shadow-inner flex items-center justify-center font-mono text-[10px] font-bold active:translate-y-1 active:border-b-0 transition-all ${presets[num] !== null ? 'text-cyan-500' : 'text-zinc-500'}`}
-                >
-                  P{num}
+              <div className="flex flex-wrap justify-center gap-3 mt-8 px-2">
+                <button onClick={togglePlay} className="w-14 h-14 bg-zinc-700 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group">
+                  {isPlaying ? <Square size={16} className="text-cyan-400" /> : <Play size={16} className="text-zinc-300 group-hover:text-white" />}
+                  <span className="text-[8px] font-bold tracking-widest uppercase text-zinc-400">Pwr</span>
                 </button>
-              ))}
-            </div>
+                <button onClick={() => { handleToggleFavorite(); playClickSound(); }} className="w-14 h-14 bg-zinc-700 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group">
+                  <Heart size={16} className={favorites.includes(currentRadio?.id) ? 'text-red-500 fill-red-500' : 'text-zinc-300 group-hover:text-white'} />
+                  <span className="text-[8px] font-bold tracking-widest uppercase text-zinc-400">Fav</span>
+                </button>
+                <button onClick={toggleBand} className={`w-14 h-14 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group ${band === 'AM' ? 'bg-amber-900/40' : 'bg-zinc-700'}`}>
+                  <Radio size={16} className={band === 'AM' ? 'text-amber-500' : 'text-cyan-400'} />
+                  <span className={`text-[8px] font-bold tracking-widest uppercase ${band === 'AM' ? 'text-amber-500' : 'text-cyan-400'}`}>{band}</span>
+                </button>
+                <button onClick={toggleBacklight} className={`w-14 h-14 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group ${backlight ? 'bg-cyan-900/30' : 'bg-zinc-800'}`}>
+                  <Lightbulb size={16} className={backlight ? 'text-cyan-400' : 'text-zinc-600'} />
+                  <span className={`text-[8px] font-bold tracking-widest uppercase ${backlight ? 'text-cyan-400' : 'text-zinc-600'}`}>Lite</span>
+                </button>
+                <button onClick={cycleTimer} className={`w-14 h-14 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group ${sleepTimer > 0 ? 'bg-cyan-900/40' : 'bg-zinc-700'}`}>
+                  <Timer size={16} className={sleepTimer > 0 ? 'text-cyan-400' : 'text-zinc-300 group-hover:text-white'} />
+                  <span className={`text-[8px] font-bold tracking-widest uppercase ${sleepTimer > 0 ? 'text-cyan-400' : 'text-zinc-400'}`}>Slp</span>
+                </button>
+                <button onClick={toggleMute} className={`w-14 h-14 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group ${isMuted ? 'bg-red-900/30 border-red-900' : 'bg-zinc-700'}`}>
+                  {isMuted ? <VolumeX size={16} className="text-red-500" /> : <Volume2 size={16} className="text-zinc-300 group-hover:text-white" />}
+                  <span className={`text-[8px] font-bold tracking-widest uppercase ${isMuted ? 'text-red-500' : 'text-zinc-400'}`}>Mut</span>
+                </button>
+                <button onClick={toggleDisplay} className={`w-14 h-14 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group ${displayMode ? 'bg-cyan-900/40' : 'bg-zinc-700'}`}>
+                  <Info size={16} className={displayMode ? 'text-cyan-400' : 'text-zinc-300 group-hover:text-white'} />
+                  <span className={`text-[8px] font-bold tracking-widest uppercase ${displayMode ? 'text-cyan-400' : 'text-zinc-400'}`}>Info</span>
+                </button>
+              </div>
 
-            <div className="grid grid-cols-4 gap-3 mt-4 px-2">
-              <button onClick={togglePlay} className="h-14 bg-zinc-700 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group">
-                {isPlaying ? <Square size={16} className="text-cyan-400" /> : <Play size={16} className="text-zinc-300 group-hover:text-white" />}
-                <span className="text-[8px] font-bold tracking-widest uppercase text-zinc-400">Pwr</span>
-              </button>
-
-              <button onClick={() => { handleToggleFavorite(); playClickSound(); }} className="h-14 bg-zinc-700 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group">
-                <Heart size={16} className={favorites.includes(currentRadio?.id) ? 'text-red-500 fill-red-500' : 'text-zinc-300 group-hover:text-white'} />
-                <span className="text-[8px] font-bold tracking-widest uppercase text-zinc-400">Fav</span>
-              </button>
-
-              <button onClick={toggleBand} className={`h-14 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group ${band === 'AM' ? 'bg-amber-900/40' : 'bg-zinc-700'}`}>
-                <Radio size={16} className={band === 'AM' ? 'text-amber-500' : 'text-cyan-400'} />
-                <span className={`text-[8px] font-bold tracking-widest uppercase ${band === 'AM' ? 'text-amber-500' : 'text-cyan-400'}`}>{band}</span>
-              </button>
-
-              <button onClick={toggleBacklight} className={`h-14 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group ${backlight ? 'bg-cyan-900/30' : 'bg-zinc-800'}`}>
-                <Lightbulb size={16} className={backlight ? 'text-cyan-400' : 'text-zinc-600'} />
-                <span className={`text-[8px] font-bold tracking-widest uppercase ${backlight ? 'text-cyan-400' : 'text-zinc-600'}`}>Lite</span>
-              </button>
-
-              <button onClick={cycleTimer} className={`h-14 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group ${sleepTimer > 0 ? 'bg-cyan-900/40' : 'bg-zinc-700'}`}>
-                <Timer size={16} className={sleepTimer > 0 ? 'text-cyan-400' : 'text-zinc-300 group-hover:text-white'} />
-                <span className={`text-[8px] font-bold tracking-widest uppercase ${sleepTimer > 0 ? 'text-cyan-400' : 'text-zinc-400'}`}>Slp</span>
-              </button>
-
-              <button onClick={toggleLofiMode} className={`h-14 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group ${isLofiMode ? 'bg-amber-900/50' : 'bg-zinc-700'}`}>
-                <Disc size={16} className={isLofiMode ? 'text-amber-500 animate-spin-slow' : 'text-zinc-300 group-hover:text-white'} style={{ animationDuration: '4s' }} />
-                <span className={`text-[8px] font-bold tracking-widest uppercase ${isLofiMode ? 'text-amber-500' : 'text-zinc-400'}`}>Vinl</span>
-              </button>
-
-              <button onClick={toggleMute} className={`h-14 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group ${isMuted ? 'bg-red-900/30 border-red-900' : 'bg-zinc-700'}`}>
-                {isMuted ? <VolumeX size={16} className="text-red-500" /> : <Volume2 size={16} className="text-zinc-300 group-hover:text-white" />}
-                <span className={`text-[8px] font-bold tracking-widest uppercase ${isMuted ? 'text-red-500' : 'text-zinc-400'}`}>Mut</span>
-              </button>
-
-              <button onClick={toggleDisplay} className={`h-14 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group ${displayMode ? 'bg-cyan-900/40' : 'bg-zinc-700'}`}>
-                <Info size={16} className={displayMode ? 'text-cyan-400' : 'text-zinc-300 group-hover:text-white'} />
-                <span className={`text-[8px] font-bold tracking-widest uppercase ${displayMode ? 'text-cyan-400' : 'text-zinc-400'}`}>Info</span>
-              </button>
-            </div>
-
-            <div className="mt-4 bg-zinc-900 rounded-xl p-4 border-2 border-zinc-950 shadow-inner flex flex-col gap-3">
-              <style dangerouslySetInnerHTML={{__html: `
-                .fader-thumb::-webkit-slider-thumb { appearance: none; width: 16px; height: 24px; background: #52525b; border: 2px solid #27272a; border-radius: 4px; cursor: grab; box-shadow: 0 2px 4px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.2); }
-                .fader-thumb::-webkit-slider-thumb:active { cursor: grabbing; }
-              `}} />
-              
-              <div className="flex items-center gap-4">
-                <span className="text-[10px] font-mono font-bold text-zinc-500 w-8 text-right">VOL</span>
-                <div className="relative flex-1 h-2 bg-black rounded-full shadow-inner flex items-center">
+              <div className="mt-8 bg-zinc-900 rounded-xl p-5 border-2 border-zinc-950 shadow-inner flex items-center gap-6">
+                <style dangerouslySetInnerHTML={{__html: `
+                  .fader-thumb::-webkit-slider-thumb { appearance: none; width: 28px; height: 40px; background: #52525b; border: 2px solid #27272a; border-radius: 4px; cursor: grab; box-shadow: 0 4px 6px rgba(0,0,0,0.5), inset 0 2px 0 rgba(255,255,255,0.2); }
+                  .fader-thumb::-webkit-slider-thumb:active { cursor: grabbing; }
+                `}} />
+                <span className="text-xs font-mono font-bold text-zinc-500">MIN</span>
+                <div className="relative flex-1 h-3 bg-black rounded-full shadow-inner flex items-center">
                   <input type="range" min="0" max="1" step="0.01" value={volume} onChange={(e) => { setVolume(parseFloat(e.target.value)); if (isMuted) toggleMute(); }} className="fader-thumb absolute w-full h-full appearance-none bg-transparent outline-none z-10" />
                   <div className="h-full rounded-full transition-all bg-cyan-400 opacity-60" style={{ width: `${volume * 100}%` }}></div>
                 </div>
+                <span className="text-xs font-mono font-bold text-zinc-500">MAX</span>
               </div>
 
-              <div className="flex items-center gap-4">
-                <span className="text-[10px] font-mono font-bold text-zinc-500 w-8 text-right">BASS</span>
-                <div className="relative flex-1 h-2 bg-black rounded-full shadow-inner flex items-center">
-                  <input type="range" min="-15" max="15" step="1" value={bass} onChange={(e) => setBass(parseInt(e.target.value))} className="fader-thumb absolute w-full h-full appearance-none bg-transparent outline-none z-10" />
-                  <div className="absolute left-1/2 w-0.5 h-3 bg-zinc-700 -translate-x-1/2"></div>
-                  <div className="h-full rounded-full bg-amber-500 opacity-40 transition-all" style={{ width: `${((bass + 15) / 30) * 100}%` }}></div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-4">
-                <span className="text-[10px] font-mono font-bold text-zinc-500 w-8 text-right">TREB</span>
-                <div className="relative flex-1 h-2 bg-black rounded-full shadow-inner flex items-center">
-                  <input type="range" min="-15" max="15" step="1" value={treble} onChange={(e) => setTreble(parseInt(e.target.value))} className="fader-thumb absolute w-full h-full appearance-none bg-transparent outline-none z-10" />
-                  <div className="absolute left-1/2 w-0.5 h-3 bg-zinc-700 -translate-x-1/2"></div>
-                  <div className="h-full rounded-full bg-orange-500 opacity-40 transition-all" style={{ width: `${((treble + 15) / 30) * 100}%` }}></div>
-                </div>
-              </div>
             </div>
-
           </div>
-        </div>
+        </FadeInSection>
       </section>
 
-      {/* FEATURES SECTION */}
-      <section id="features" className="py-24 bg-zinc-900 border-t border-zinc-800 px-6">
+      <section id="stations" className="py-24 bg-zinc-900 border-t border-zinc-800 px-6">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-black mb-4">Hardware Features. <span className="text-cyan-400">Software Magic.</span></h2>
-            <p className="text-zinc-400 max-w-2xl mx-auto">Tudo o que se espera de um rádio de cabeceira topo de gama, construído puramente com tecnologias web modernas.</p>
-          </div>
+          <FadeInSection>
+            <div className="text-center mb-16">
+              <h2 className="text-3xl md:text-5xl font-black mb-4">Sintoniza a <span className="text-cyan-400">Tua Vibe.</span></h2>
+              <p className="text-zinc-400 max-w-2xl mx-auto">Uma curadoria premium de frequências e géneros para acompanhar qualquer momento do teu dia.</p>
+            </div>
+          </FadeInSection>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="bg-zinc-800 p-6 rounded-2xl border border-zinc-700/50 hover:border-cyan-500/50 transition-colors">
-              <Headphones className="text-cyan-400 mb-4" size={32} />
-              <h3 className="text-xl font-bold mb-2">Web Audio API</h3>
-              <p className="text-zinc-400 text-sm">Processamento de sinal em tempo real. Equalizador mecânico e analisador de espectro de alta precisão (FFT 64).</p>
-            </div>
-            <div className="bg-zinc-800 p-6 rounded-2xl border border-zinc-700/50 hover:border-orange-500/50 transition-colors">
-              <Disc className="text-orange-500 mb-4" size={32} />
-              <h3 className="text-xl font-bold mb-2">Vinyl & AM FX</h3>
-              <p className="text-zinc-400 text-sm">Filtros *Lowpass* e *Bandpass* algoritmos que cortam frequências para emular a imperfeição acolhedora do som analógico e cassetes.</p>
-            </div>
-            <div className="bg-zinc-800 p-6 rounded-2xl border border-zinc-700/50 hover:border-emerald-500/50 transition-colors">
-              <Cpu className="text-emerald-500 mb-4" size={32} />
-              <h3 className="text-xl font-bold mb-2">Memória EEPROM</h3>
-              <p className="text-zinc-400 text-sm">Tal como num rádio real, o estado é preservado. Favoritos, volume, equalização e os *Presets* P1-P3 nunca são esquecidos.</p>
-            </div>
-            <div className="bg-zinc-800 p-6 rounded-2xl border border-zinc-700/50 hover:border-purple-500/50 transition-colors">
-              <Layers className="text-purple-500 mb-4" size={32} />
-              <h3 className="text-xl font-bold mb-2">Skeuomorphic UI</h3>
-              <p className="text-zinc-400 text-sm">Design focado no aspeto tátil, com botões mecânicos, cliques reativos e um ecrã LCD com luz de fundo controlável.</p>
-            </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {displayRadios.slice(0, 4).map((r, i) => (
+              <FadeInSection key={r.id} delay={i * 100}>
+                <div className="bg-zinc-950/50 p-6 rounded-2xl border border-zinc-800 flex flex-col items-center text-center hover:border-cyan-500/30 transition-colors group cursor-pointer" onClick={() => changeRadio(i)}>
+                  <div className="w-24 h-24 mb-4 drop-shadow-md group-hover:scale-110 transition-transform">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={r.logo} alt={r.name} className="w-full h-full object-contain" />
+                  </div>
+                  <h3 className="font-bold text-white mb-1">{r.name}</h3>
+                  <p className="text-xs font-mono text-cyan-400">[{r.genre}]</p>
+                </div>
+              </FadeInSection>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* TECH STACK SECTION */}
-      <section id="tech" className="py-24 bg-zinc-950 px-6">
-        <div className="max-w-4xl mx-auto text-center">
-          <Code2 className="text-zinc-500 mx-auto mb-6" size={48} />
-          <h2 className="text-3xl font-black mb-6">Desenvolvido por Luis Paulo</h2>
-          <p className="text-zinc-400 text-lg leading-relaxed mb-8">
-            Estudante de Análise e Desenvolvimento de Sistemas com foco em engenharia Full Stack. O projeto Radio Arch demonstra a capacidade de combinar manipulação avançada da DOM, gestão de estado complexa em React, e arquitetura baseada em eventos (Web Audio API) numa interface altamente responsiva estilizada com Tailwind CSS.
-          </p>
-          <a href="https://github.com/LuisPauloCN507/RadioArch" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white px-6 py-3 rounded-full font-bold transition-colors">
-            Ver Código no GitHub
-          </a>
+      <section id="guide" className="py-24 bg-zinc-950 px-6">
+        <div className="max-w-7xl mx-auto">
+          <FadeInSection>
+            <div className="flex flex-col md:flex-row items-center gap-16">
+              <div className="md:w-1/2">
+                <h2 className="text-3xl md:text-4xl font-black mb-8">Hardware <span className="text-cyan-400">Reference Guide.</span></h2>
+                <div className="space-y-6">
+                  <div className="flex gap-4 items-start">
+                    <div className="w-10 h-10 bg-zinc-800 rounded flex items-center justify-center shrink-0 border border-zinc-700"><Timer size={20} className="text-cyan-400"/></div>
+                    <div>
+                      <h4 className="font-bold text-lg">Sleep Timer</h4>
+                      <p className="text-zinc-400 text-sm">Configura o rádio para desligar automaticamente após 15, 30 ou 60 minutos. Ideal para focares nos estudos ou dormir a ouvir Lo-Fi.</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-4 items-start">
+                    <div className="w-10 h-10 bg-zinc-800 rounded flex items-center justify-center shrink-0 border border-zinc-700"><Radio size={20} className="text-cyan-400"/></div>
+                    <div>
+                      <h4 className="font-bold text-lg">AM / FM Toggle</h4>
+                      <p className="text-zinc-400 text-sm">Alterna o sinal. O modo FM (padrão) entrega alta fidelidade (24kHz). O modo AM aplica um filtro bandpass analógico e gera estática real no áudio.</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-4 items-start">
+                    <div className="w-10 h-10 bg-zinc-800 rounded flex items-center justify-center shrink-0 border border-zinc-700"><Info size={20} className="text-cyan-400"/></div>
+                    <div>
+                      <h4 className="font-bold text-lg">Diagnostic Mode</h4>
+                      <p className="text-zinc-400 text-sm">Oculta temporariamente o analisador de espectro em tempo real para exibir dados da framework, atalhos de teclado e meta-informação da stream.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="md:w-1/2 flex justify-center">
+                <div className="w-72 h-96 border-2 border-dashed border-zinc-800 rounded-3xl flex items-center justify-center bg-zinc-900/30">
+                   <Code2 size={64} className="text-zinc-700" />
+                </div>
+              </div>
+            </div>
+          </FadeInSection>
         </div>
       </section>
 
-      {/* FOOTER */}
-      <footer className="py-8 bg-black border-t border-zinc-900 text-center">
+      <section id="developer" className="py-24 bg-zinc-900 border-t border-zinc-800 px-6">
+        <FadeInSection>
+          <div className="max-w-3xl mx-auto text-center">
+            
+            <div className="w-24 h-24 mx-auto bg-zinc-800 rounded-full border-2 border-cyan-500 mb-6 flex items-center justify-center text-3xl font-bold text-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.2)]">
+              L3
+            </div>
+            
+            <h2 className="text-3xl font-black mb-2">Luis Paulo <span className="text-zinc-500">(@Lupd3v)</span></h2>
+            <div className="flex items-center justify-center gap-2 text-cyan-400 font-mono text-sm mb-6">
+              <MapPin size={16} /> Piauí, Brasil
+            </div>
+            
+            <p className="text-zinc-400 text-lg leading-relaxed mb-8">
+              Estudante de Análise e Desenvolvimento de Sistemas com foco prático em engenharia Full Stack.
+              O projeto <strong className="text-white">Radio Arch</strong> demonstra a capacidade de combinar manipulação avançada da DOM,
+              gestão de estado complexa em React, e arquitetura baseada em eventos via Web Audio API,
+              entregando uma UI tátil estilizada de forma imaculada com Tailwind CSS.
+            </p>
+            
+            <div className="flex justify-center gap-4">
+              <a href="https://github.com/LuisPauloCN507" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white px-6 py-3 rounded-xl font-bold transition-colors border border-zinc-700">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
+                GitHub
+              </a>
+              <a href="#" className="inline-flex items-center gap-2 bg-cyan-600 hover:bg-cyan-500 text-black px-6 py-3 rounded-xl font-bold transition-colors shadow-[0_0_15px_rgba(34,211,238,0.2)]">
+                 Contactar
+              </a>
+            </div>
+          </div>
+        </FadeInSection>
+      </section>
+
+      <footer className="py-8 bg-black text-center">
         <p className="text-zinc-600 font-mono text-xs">
-          © {new Date().getFullYear()} Radio Arch | Criado com <span className="text-cyan-500">Next.js</span> & <span className="text-cyan-500">Tailwind CSS</span>
+          © {new Date().getFullYear()} Lupd3v | Criado com <span className="text-cyan-500">Next.js</span> & <span className="text-cyan-500">Tailwind CSS</span>
         </p>
       </footer>
       
