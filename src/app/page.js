@@ -2,7 +2,7 @@
 
 import Player from '@/components/Player';
 import { radioList } from '@/data/radios';
-import { ChevronDown, ChevronUp, Disc, Heart, Info, Lightbulb, Play, Radio, Square, Timer, Volume2, VolumeX } from 'lucide-react';
+import { ChevronDown, ChevronUp, Code2, Cpu, Disc, Headphones, Heart, Info, Layers, Lightbulb, Play, Radio, Square, Timer, Volume2, VolumeX } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 const VERTICAL_SPACING = 180; 
@@ -55,13 +55,11 @@ export default function Home() {
   const [isMuted, setIsMuted] = useState(false);
   const [displayMode, setDisplayMode] = useState(false);
   
-  // NOVOS ESTADOS (5 FUNCIONALIDADES)
   const [presets, setPresets] = useState({ 1: null, 2: null, 3: null });
-  const [bass, setBass] = useState(0); // -15 a 15
-  const [treble, setTreble] = useState(0); // -15 a 15
-  const [band, setBand] = useState('FM'); // 'FM' ou 'AM'
+  const [bass, setBass] = useState(0); 
+  const [treble, setTreble] = useState(0); 
+  const [band, setBand] = useState('FM'); 
   const [backlight, setBacklight] = useState(true);
-  const [tilt, setTilt] = useState({ x: 0, y: 0 });
   
   const audioRef = useRef(null);
   const canvasRef = useRef(null);
@@ -83,15 +81,6 @@ export default function Home() {
   useEffect(() => {
     lcdColorRef.current = lcdColor;
   }, [lcdColor]);
-
-  // EFEITO PARALLAX 3D
-  const handleMouseMove = useCallback((e) => {
-    const { clientX, clientY } = e;
-    const { innerWidth, innerHeight } = window;
-    const xAxis = ((innerWidth / 2 - clientX) / 60); 
-    const yAxis = ((innerHeight / 2 - clientY) / 60);
-    setTilt({ x: xAxis, y: yAxis });
-  }, []);
 
   const playClickSound = useCallback(() => {
     try {
@@ -139,9 +128,7 @@ export default function Home() {
       const bufferSize = ctx.sampleRate * 2; 
       const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
       const data = buffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) {
-        data[i] = Math.random() * 2 - 1;
-      }
+      for (let i = 0; i < bufferSize; i++) { data[i] = Math.random() * 2 - 1; }
       const noiseSource = ctx.createBufferSource();
       noiseSource.buffer = buffer;
       noiseSource.loop = true;
@@ -149,7 +136,7 @@ export default function Home() {
       filter.type = 'bandpass';
       filter.frequency.value = 1000;
       const gain = ctx.createGain();
-      gain.gain.value = band === 'AM' ? 0.3 : 0.15; // AM tem mais estática
+      gain.gain.value = band === 'AM' ? 0.3 : 0.15; 
       noiseSource.connect(filter);
       filter.connect(gain);
       gain.connect(ctx.destination);
@@ -231,7 +218,6 @@ export default function Home() {
     playClickSound();
   }, [playClickSound]);
 
-  // PRESET LOGIC (Hold to save, click to load)
   const handlePresetDown = (slot) => {
     pressTimerRef.current = setTimeout(() => {
       setPresets(prev => ({ ...prev, [slot]: activeIndex }));
@@ -247,7 +233,7 @@ export default function Home() {
       if (presets[slot] !== null && presets[slot] !== undefined) {
         changeRadio(presets[slot]);
       } else {
-        playSystemBeep(200, 'square', 0.1); // Error beep (empty preset)
+        playSystemBeep(200, 'square', 0.1);
       }
     }
   };
@@ -280,7 +266,6 @@ export default function Home() {
   useEffect(() => { localStorage.setItem('radioarch_lofi', isLofiMode.toString()); }, [isLofiMode]);
   useEffect(() => { localStorage.setItem('radioarch_presets', JSON.stringify(presets)); }, [presets]);
 
-  // APPLY AUDIO FILTERS IN REAL TIME
   useEffect(() => {
     if (audioCtxRef.current) {
       if (lofiFilterRef.current) {
@@ -314,9 +299,7 @@ export default function Home() {
   const handleToggleFavorite = useCallback(() => {
     if (!currentRadio) return;
     setFavorites(prev => 
-      prev.includes(currentRadio.id) 
-        ? prev.filter(id => id !== currentRadio.id) 
-        : [...prev, currentRadio.id]
+      prev.includes(currentRadio.id) ? prev.filter(id => id !== currentRadio.id) : [...prev, currentRadio.id]
     );
     playSystemBeep(1200, 'sine', 0.1); 
   }, [currentRadio, playSystemBeep]);
@@ -387,22 +370,17 @@ export default function Home() {
         analyserRef.current = audioCtxRef.current.createAnalyser();
         analyserRef.current.fftSize = 64; 
         
-        // NODE CHAIN: Source -> LoFi -> AM -> Bass -> Treble -> Analyser -> Dest
         lofiFilterRef.current = audioCtxRef.current.createBiquadFilter();
         lofiFilterRef.current.type = 'lowpass';
-        
         amFilterRef.current = audioCtxRef.current.createBiquadFilter();
-        
         bassFilterRef.current = audioCtxRef.current.createBiquadFilter();
         bassFilterRef.current.type = 'lowshelf';
         bassFilterRef.current.frequency.value = 250;
-        
         trebleFilterRef.current = audioCtxRef.current.createBiquadFilter();
         trebleFilterRef.current.type = 'highshelf';
         trebleFilterRef.current.frequency.value = 4000;
 
         sourceRef.current = audioCtxRef.current.createMediaElementSource(audio);
-        
         sourceRef.current.connect(lofiFilterRef.current);
         lofiFilterRef.current.connect(amFilterRef.current);
         amFilterRef.current.connect(bassFilterRef.current);
@@ -442,9 +420,7 @@ export default function Home() {
     if (audioRef.current && currentRadio) {
       audioRef.current.src = currentRadio.url;
       audioRef.current.load();
-      if (isPlaying) {
-        audioRef.current.play().catch(() => {});
-      }
+      if (isPlaying) { audioRef.current.play().catch(() => {}); }
     }
   }, [currentRadio, isPlaying]);
 
@@ -463,11 +439,8 @@ export default function Home() {
   }, [isPlaying, stopVisualizer]);
 
   return (
-    <main 
-      className="min-h-screen bg-zinc-950 text-white overflow-hidden flex items-center justify-center font-sans relative selection:bg-cyan-500 selection:text-black p-4 md:p-8"
-      onMouseMove={handleMouseMove}
-      style={{ perspective: '1200px' }}
-    >
+    <div className="min-h-screen bg-zinc-950 text-white font-sans selection:bg-cyan-500 selection:text-black overflow-x-hidden">
+      
       <audio 
         ref={audioRef} 
         crossOrigin="anonymous" 
@@ -478,210 +451,275 @@ export default function Home() {
         onError={() => setIsLoading(true)} 
       />
 
-      {/* CHASSI DO RÁDIO (COM EFEITO PARALLAX E CLASSE CORRIGIDA h-175) */}
-      <div 
-        className="relative w-full max-w-6xl h-175 bg-zinc-800 rounded-[2.5rem] p-6 shadow-[0_35px_60px_-15px_rgba(0,0,0,0.8),inset_0_2px_4px_rgba(255,255,255,0.1)] border border-zinc-700 flex flex-col md:flex-row gap-8 overflow-hidden transition-transform duration-100 ease-out"
-        style={{ transform: `rotateY(${tilt.x}deg) rotateX(${tilt.y}deg)` }}
-      >
-        
-        {/* PARTE ESQUERDA: TUNER VERTICAL */}
-        <div className="w-full md:w-5/12 h-full relative rounded-2xl bg-[#1e1e24] shadow-inner overflow-hidden border-4 border-zinc-900 flex flex-col items-center justify-between py-6">
-          <div className="absolute inset-0 bg-[radial-gradient(#000_2px,transparent_2px)] bg-size-[10px_10px] opacity-40 pointer-events-none"></div>
-
-          <button 
-            onClick={() => changeRadio(previousIndex)}
-            className="relative z-10 w-16 h-10 bg-zinc-700 hover:bg-zinc-600 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 flex items-center justify-center transition-all border border-zinc-600"
-          >
-            <ChevronUp size={24} className="text-zinc-300" />
-          </button>
-
-          <div className="relative w-full h-95 flex items-center justify-center">
-            {displayRadios.map((radio, index) => {
-              const isCenter = index === safeIndex;
-              const offset = index - safeIndex;
-              return (
-                <VerticalDeckItem
-                  key={radio.id}
-                  radio={radio}
-                  isCenter={isCenter}
-                  offset={offset}
-                  onSelect={() => {
-                    changeRadio(index);
-                    if (!isPlaying) togglePlay(); 
-                  }}
-                />
-              );
-            })}
+      {/* NAVBAR */}
+      <nav className="fixed top-0 w-full z-50 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-900/50">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Radio className="text-cyan-400" size={24} />
+            <span className="font-mono font-bold tracking-widest uppercase text-lg">
+              RADIO<span className="text-orange-500">ARCH</span>
+            </span>
           </div>
-
-          <button 
-            onClick={() => changeRadio(nextIndex)}
-            className="relative z-10 w-16 h-10 bg-zinc-700 hover:bg-zinc-600 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 flex items-center justify-center transition-all border border-zinc-600"
-          >
-            <ChevronDown size={24} className="text-zinc-300" />
+          <div className="hidden md:flex gap-8 text-sm font-medium text-zinc-400">
+            <a href="#app" className="hover:text-cyan-400 transition-colors">Player</a>
+            <a href="#features" className="hover:text-cyan-400 transition-colors">Features</a>
+            <a href="#tech" className="hover:text-cyan-400 transition-colors">Tech Stack</a>
+          </div>
+          <button onClick={() => { document.getElementById('app').scrollIntoView({ behavior: 'smooth' }); }} className="bg-cyan-500 hover:bg-cyan-400 text-black px-4 py-2 rounded-md font-bold text-sm transition-colors shadow-[0_0_15px_rgba(34,211,238,0.3)]">
+            Listen Now
           </button>
         </div>
+      </nav>
 
-        {/* PARTE DIREITA: LCD SCREEN & CONTROLES */}
-        <div className="flex-1 h-full flex flex-col justify-between py-4">
+      {/* HERO & INTERACTIVE APP SECTION */}
+      <section id="app" className="pt-32 pb-24 px-4 md:px-8 flex flex-col items-center justify-center min-h-screen relative">
+        
+        {/* Glow de fundo da página */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-200 h-150 bg-cyan-900/20 blur-[120px] rounded-full pointer-events-none"></div>
+
+        <div className="text-center mb-16 relative z-10">
+          <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-transparent bg-clip-text bg-linear-to-br from-white via-zinc-200 to-zinc-500 mb-6">
+            O Som Analógico <br className="hidden md:block" /> na Era Digital.
+          </h1>
+          <p className="text-zinc-400 text-lg md:text-xl max-w-2xl mx-auto font-light">
+            Radio Arch é um simulador físico de rádio web construído para devs. Sintoniza a tua rádio, ajusta o equalizador e ativa o filtro de Vinil em tempo real.
+          </p>
+        </div>
+
+        {/* CHASSI DO RÁDIO */}
+        <div className="relative w-full max-w-6xl h-175 bg-zinc-800 rounded-[2.5rem] p-6 shadow-[0_35px_60px_-15px_rgba(0,0,0,0.8),inset_0_2px_4px_rgba(255,255,255,0.1)] border border-zinc-700 flex flex-col md:flex-row gap-8 z-10">
           
-          {/* ECRÃ LCD */}
-          <div className="w-full h-56 bg-[#050505] rounded-xl border-[6px] border-zinc-900 shadow-[inset_0_0_20px_rgba(0,0,0,1)] relative flex flex-col p-6 overflow-hidden">
-            <div className={`absolute inset-0 bg-linear-to-tr from-transparent via-white/5 to-transparent pointer-events-none transition-opacity ${backlight ? 'opacity-100' : 'opacity-20'}`}></div>
+          <div className="w-full md:w-5/12 h-full relative rounded-2xl bg-[#1e1e24] shadow-inner overflow-hidden border-4 border-zinc-900 flex flex-col items-center justify-between py-6">
+            <div className="absolute inset-0 bg-[radial-gradient(#000_2px,transparent_2px)] bg-size-[10px_10px] opacity-40 pointer-events-none"></div>
+
+            <button 
+              onClick={() => changeRadio(previousIndex)}
+              className="relative z-10 w-16 h-10 bg-zinc-700 hover:bg-zinc-600 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 flex items-center justify-center transition-all border border-zinc-600"
+            >
+              <ChevronUp size={24} className="text-zinc-300" />
+            </button>
+
+            <div className="relative w-full h-95 flex items-center justify-center">
+              {displayRadios.map((radio, index) => {
+                const isCenter = index === safeIndex;
+                const offset = index - safeIndex;
+                return (
+                  <VerticalDeckItem key={radio.id} radio={radio} isCenter={isCenter} offset={offset} onSelect={() => { changeRadio(index); if (!isPlaying) togglePlay(); }} />
+                );
+              })}
+            </div>
+
+            <button 
+              onClick={() => changeRadio(nextIndex)}
+              className="relative z-10 w-16 h-10 bg-zinc-700 hover:bg-zinc-600 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 flex items-center justify-center transition-all border border-zinc-600"
+            >
+              <ChevronDown size={24} className="text-zinc-300" />
+            </button>
+          </div>
+
+          <div className="flex-1 h-full flex flex-col justify-between py-4">
             
-            <div className="flex justify-between items-start w-full relative z-10">
-              <div className="flex flex-col gap-1">
-                <h1 className={`text-lg font-black tracking-[0.3em] uppercase italic font-mono flex items-center gap-4 transition-all ${backlight ? 'opacity-60 text-white' : 'opacity-30 text-zinc-600'}`}>
-                  <span>RADIO<span className={backlight ? 'text-orange-500' : 'text-orange-900'}>ARCH</span></span>
-                </h1>
-                <div className="flex gap-2 font-mono text-[9px] tracking-widest font-bold">
-                  <span className={`${band === 'AM' ? 'text-amber-500' : 'text-zinc-800'}`}>[AM]</span>
-                  <span className={`${band === 'FM' ? 'text-cyan-400' : 'text-zinc-800'}`}>[FM]</span>
-                  <span className={`${isLofiMode ? 'text-amber-500 animate-pulse' : 'text-zinc-800'}`}>[VINYL FX]</span>
-                  <span className={`${isMuted ? 'text-red-500 animate-pulse' : 'text-zinc-800'}`}>[MUTED]</span>
-                </div>
-              </div>
+            <div className="w-full h-56 bg-[#050505] rounded-xl border-[6px] border-zinc-900 shadow-[inset_0_0_20px_rgba(0,0,0,1)] relative flex flex-col p-6 overflow-hidden">
+              <div className={`absolute inset-0 bg-linear-to-tr from-transparent via-white/5 to-transparent pointer-events-none transition-opacity ${backlight ? 'opacity-100' : 'opacity-20'}`}></div>
               
-              <div className="flex flex-col items-end transition-colors" style={{ color: lcdColor }}>
-                <div className="flex items-center gap-3 mb-1">
-                  {sleepTimer > 0 && <span className="text-zinc-500 text-[10px] font-mono tracking-widest">⏱ {formatTime(timeLeft)}</span>}
-                  <span className={`text-lg font-mono font-bold tracking-widest ${backlight ? 'drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]' : ''}`}>
-                    {currentTime}
+              <div className="flex justify-between items-start w-full relative z-10">
+                <div className="flex flex-col gap-1">
+                  <h1 className={`text-lg font-black tracking-[0.3em] uppercase italic font-mono flex items-center gap-4 transition-all ${backlight ? 'opacity-60 text-white' : 'opacity-30 text-zinc-600'}`}>
+                    <span>RADIO<span className={backlight ? 'text-orange-500' : 'text-orange-900'}>ARCH</span></span>
+                  </h1>
+                  <div className="flex gap-2 font-mono text-[9px] tracking-widest font-bold">
+                    <span className={`${band === 'AM' ? 'text-amber-500' : 'text-zinc-800'}`}>[AM]</span>
+                    <span className={`${band === 'FM' ? 'text-cyan-400' : 'text-zinc-800'}`}>[FM]</span>
+                    <span className={`${isLofiMode ? 'text-amber-500 animate-pulse' : 'text-zinc-800'}`}>[VINYL FX]</span>
+                    <span className={`${isMuted ? 'text-red-500 animate-pulse' : 'text-zinc-800'}`}>[MUTED]</span>
+                  </div>
+                </div>
+                
+                <div className="flex flex-col items-end transition-colors" style={{ color: lcdColor }}>
+                  <div className="flex items-center gap-3 mb-1">
+                    {sleepTimer > 0 && <span className="text-zinc-500 text-[10px] font-mono tracking-widest">⏱ {formatTime(timeLeft)}</span>}
+                    <span className={`text-lg font-mono font-bold tracking-widest ${backlight ? 'drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]' : ''}`}>
+                      {currentTime}
+                    </span>
+                  </div>
+                  <span className={`${isPlaying && isLoading ? (backlight ? 'text-yellow-400' : 'text-yellow-700') : ''} text-xs font-mono font-bold animate-pulse`}>
+                    {isPlaying ? (isLoading ? 'TUNING...' : 'ON AIR') : 'STANDBY'}
                   </span>
                 </div>
-                <span className={`${isPlaying && isLoading ? (backlight ? 'text-yellow-400' : 'text-yellow-700') : ''} text-xs font-mono font-bold animate-pulse`}>
-                  {isPlaying ? (isLoading ? 'TUNING...' : 'ON AIR') : 'STANDBY'}
-                </span>
+              </div>
+
+              <div className="flex-1 flex flex-col justify-center items-center mt-2 relative z-10">
+                <canvas ref={canvasRef} width={280} height={50} className={displayMode ? 'hidden' : 'mb-4'} />
+                
+                <div className={displayMode ? 'hidden' : 'flex flex-col items-center transition-colors'} style={{ color: lcdColor }}>
+                  <h2 className={`text-2xl font-bold tracking-wider text-center line-clamp-1 ${backlight ? 'text-white' : 'text-zinc-500'}`}>
+                    {currentRadio?.name}
+                  </h2>
+                  <p className="text-xs mt-2 font-medium tracking-[0.3em] uppercase font-mono">
+                    [{currentRadio?.genre}]
+                  </p>
+                </div>
+
+                <div className={`w-full flex flex-col gap-1.5 font-mono text-[10px] opacity-90 transition-colors ${displayMode ? 'block' : 'hidden'}`} style={{ color: lcdColor }}>
+                  <p className={`border-b pb-1 mb-1 font-bold ${backlight ? 'border-cyan-900 text-white' : 'border-zinc-800 text-zinc-400'}`}>SYSTEM DIAGNOSTICS</p>
+                  <p>FREQ: {(88.0 + safeIndex * 2.4).toFixed(1)} MHz</p>
+                  <p>BAND: {band} / BASS: {bass}dB / TREB: {treble}dB</p>
+                  <p>STATUS: {isLoading ? 'SYNCING...' : (isPlaying ? 'ACTIVE' : 'IDLE')}</p>
+                  <p>PRESETS: [ {presets[1]!==null?'P1 ':'-- '} {presets[2]!==null?'P2 ':'-- '} {presets[3]!==null?'P3 ':'-- '} ]</p>
+                </div>
               </div>
             </div>
 
-            <div className="flex-1 flex flex-col justify-center items-center mt-2 relative z-10">
-              <canvas ref={canvasRef} width={280} height={50} className={displayMode ? 'hidden' : 'mb-4'} />
-              
-              <div className={displayMode ? 'hidden' : 'flex flex-col items-center transition-colors'} style={{ color: lcdColor }}>
-                <h2 className={`text-2xl font-bold tracking-wider text-center line-clamp-1 ${backlight ? 'text-white' : 'text-zinc-500'}`}>
-                  {currentRadio?.name}
-                </h2>
-                <p className="text-xs mt-2 font-medium tracking-[0.3em] uppercase font-mono">
-                  [{currentRadio?.genre}]
-                </p>
-              </div>
-
-              {/* MODO DE DIAGNÓSTICO */}
-              <div className={`w-full flex flex-col gap-1.5 font-mono text-[10px] opacity-90 transition-colors ${displayMode ? 'block' : 'hidden'}`} style={{ color: lcdColor }}>
-                <p className={`border-b pb-1 mb-1 font-bold ${backlight ? 'border-cyan-900 text-white' : 'border-zinc-800 text-zinc-400'}`}>SYSTEM DIAGNOSTICS</p>
-                <p>FREQ: {(88.0 + safeIndex * 2.4).toFixed(1)} MHz</p>
-                <p>BAND: {band} / BASS: {bass}dB / TREB: {treble}dB</p>
-                <p>STATUS: {isLoading ? 'SYNCING...' : (isPlaying ? 'ACTIVE' : 'IDLE')}</p>
-                <p>PRESETS: [ {presets[1]!==null?'P1 ':'-- '} {presets[2]!==null?'P2 ':'-- '} {presets[3]!==null?'P3 ':'-- '} ]</p>
-              </div>
+            <div className="flex justify-center gap-4 mt-3">
+              {[1, 2, 3].map(num => (
+                <button 
+                  key={num}
+                  onPointerDown={() => handlePresetDown(num)}
+                  onPointerUp={() => handlePresetUp(num)}
+                  onPointerLeave={() => { if(pressTimerRef.current) { clearTimeout(pressTimerRef.current); pressTimerRef.current = null; } }}
+                  className={`w-12 h-6 rounded border-b-2 bg-zinc-800 border-zinc-950 shadow-inner flex items-center justify-center font-mono text-[10px] font-bold active:translate-y-1 active:border-b-0 transition-all ${presets[num] !== null ? 'text-cyan-500' : 'text-zinc-500'}`}
+                >
+                  P{num}
+                </button>
+              ))}
             </div>
-          </div>
 
-          {/* BOTÕES DE PRESET MECÂNICOS */}
-          <div className="flex justify-center gap-4 mt-3">
-            {[1, 2, 3].map(num => (
-              <button 
-                key={num}
-                onPointerDown={() => handlePresetDown(num)}
-                onPointerUp={() => handlePresetUp(num)}
-                onPointerLeave={() => { if(pressTimerRef.current) { clearTimeout(pressTimerRef.current); pressTimerRef.current = null; } }}
-                className={`w-12 h-6 rounded border-b-2 bg-zinc-800 border-zinc-950 shadow-inner flex items-center justify-center font-mono text-[10px] font-bold active:translate-y-1 active:border-b-0 transition-all ${presets[num] !== null ? 'text-cyan-500' : 'text-zinc-500'}`}
-              >
-                P{num}
+            <div className="grid grid-cols-4 gap-3 mt-4 px-2">
+              <button onClick={togglePlay} className="h-14 bg-zinc-700 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group">
+                {isPlaying ? <Square size={16} className="text-cyan-400" /> : <Play size={16} className="text-zinc-300 group-hover:text-white" />}
+                <span className="text-[8px] font-bold tracking-widest uppercase text-zinc-400">Pwr</span>
               </button>
-            ))}
-          </div>
 
-          {/* PAINEL DE BOTÕES FÍSICOS (Grelha 4x2) */}
-          <div className="grid grid-cols-4 gap-3 mt-4 px-2">
-            
-            <button onClick={togglePlay} className="h-14 bg-zinc-700 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group">
-              {isPlaying ? <Square size={16} className="text-cyan-400" /> : <Play size={16} className="text-zinc-300 group-hover:text-white" />}
-              <span className="text-[8px] font-bold tracking-widest uppercase text-zinc-400">Pwr</span>
-            </button>
+              <button onClick={() => { handleToggleFavorite(); playClickSound(); }} className="h-14 bg-zinc-700 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group">
+                <Heart size={16} className={favorites.includes(currentRadio?.id) ? 'text-red-500 fill-red-500' : 'text-zinc-300 group-hover:text-white'} />
+                <span className="text-[8px] font-bold tracking-widest uppercase text-zinc-400">Fav</span>
+              </button>
 
-            <button onClick={() => { handleToggleFavorite(); playClickSound(); }} className="h-14 bg-zinc-700 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group">
-              <Heart size={16} className={favorites.includes(currentRadio?.id) ? 'text-red-500 fill-red-500' : 'text-zinc-300 group-hover:text-white'} />
-              <span className="text-[8px] font-bold tracking-widest uppercase text-zinc-400">Fav</span>
-            </button>
+              <button onClick={toggleBand} className={`h-14 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group ${band === 'AM' ? 'bg-amber-900/40' : 'bg-zinc-700'}`}>
+                <Radio size={16} className={band === 'AM' ? 'text-amber-500' : 'text-cyan-400'} />
+                <span className={`text-[8px] font-bold tracking-widest uppercase ${band === 'AM' ? 'text-amber-500' : 'text-cyan-400'}`}>{band}</span>
+              </button>
 
-            <button onClick={toggleBand} className={`h-14 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group ${band === 'AM' ? 'bg-amber-900/40' : 'bg-zinc-700'}`}>
-              <Radio size={16} className={band === 'AM' ? 'text-amber-500' : 'text-cyan-400'} />
-              <span className={`text-[8px] font-bold tracking-widest uppercase ${band === 'AM' ? 'text-amber-500' : 'text-cyan-400'}`}>{band}</span>
-            </button>
+              <button onClick={toggleBacklight} className={`h-14 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group ${backlight ? 'bg-cyan-900/30' : 'bg-zinc-800'}`}>
+                <Lightbulb size={16} className={backlight ? 'text-cyan-400' : 'text-zinc-600'} />
+                <span className={`text-[8px] font-bold tracking-widest uppercase ${backlight ? 'text-cyan-400' : 'text-zinc-600'}`}>Lite</span>
+              </button>
 
-            <button onClick={toggleBacklight} className={`h-14 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group ${backlight ? 'bg-cyan-900/30' : 'bg-zinc-800'}`}>
-              <Lightbulb size={16} className={backlight ? 'text-cyan-400' : 'text-zinc-600'} />
-              <span className={`text-[8px] font-bold tracking-widest uppercase ${backlight ? 'text-cyan-400' : 'text-zinc-600'}`}>Lite</span>
-            </button>
+              <button onClick={cycleTimer} className={`h-14 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group ${sleepTimer > 0 ? 'bg-cyan-900/40' : 'bg-zinc-700'}`}>
+                <Timer size={16} className={sleepTimer > 0 ? 'text-cyan-400' : 'text-zinc-300 group-hover:text-white'} />
+                <span className={`text-[8px] font-bold tracking-widest uppercase ${sleepTimer > 0 ? 'text-cyan-400' : 'text-zinc-400'}`}>Slp</span>
+              </button>
 
-            <button onClick={cycleTimer} className={`h-14 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group ${sleepTimer > 0 ? 'bg-cyan-900/40' : 'bg-zinc-700'}`}>
-              <Timer size={16} className={sleepTimer > 0 ? 'text-cyan-400' : 'text-zinc-300 group-hover:text-white'} />
-              <span className={`text-[8px] font-bold tracking-widest uppercase ${sleepTimer > 0 ? 'text-cyan-400' : 'text-zinc-400'}`}>Slp</span>
-            </button>
+              <button onClick={toggleLofiMode} className={`h-14 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group ${isLofiMode ? 'bg-amber-900/50' : 'bg-zinc-700'}`}>
+                <Disc size={16} className={isLofiMode ? 'text-amber-500 animate-spin-slow' : 'text-zinc-300 group-hover:text-white'} style={{ animationDuration: '4s' }} />
+                <span className={`text-[8px] font-bold tracking-widest uppercase ${isLofiMode ? 'text-amber-500' : 'text-zinc-400'}`}>Vinl</span>
+              </button>
 
-            <button onClick={toggleLofiMode} className={`h-14 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group ${isLofiMode ? 'bg-amber-900/50' : 'bg-zinc-700'}`}>
-              <Disc size={16} className={isLofiMode ? 'text-amber-500 animate-spin-slow' : 'text-zinc-300 group-hover:text-white'} style={{ animationDuration: '4s' }} />
-              <span className={`text-[8px] font-bold tracking-widest uppercase ${isLofiMode ? 'text-amber-500' : 'text-zinc-400'}`}>Vinl</span>
-            </button>
+              <button onClick={toggleMute} className={`h-14 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group ${isMuted ? 'bg-red-900/30 border-red-900' : 'bg-zinc-700'}`}>
+                {isMuted ? <VolumeX size={16} className="text-red-500" /> : <Volume2 size={16} className="text-zinc-300 group-hover:text-white" />}
+                <span className={`text-[8px] font-bold tracking-widest uppercase ${isMuted ? 'text-red-500' : 'text-zinc-400'}`}>Mut</span>
+              </button>
 
-            <button onClick={toggleMute} className={`h-14 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group ${isMuted ? 'bg-red-900/30 border-red-900' : 'bg-zinc-700'}`}>
-              {isMuted ? <VolumeX size={16} className="text-red-500" /> : <Volume2 size={16} className="text-zinc-300 group-hover:text-white" />}
-              <span className={`text-[8px] font-bold tracking-widest uppercase ${isMuted ? 'text-red-500' : 'text-zinc-400'}`}>Mut</span>
-            </button>
-
-            <button onClick={toggleDisplay} className={`h-14 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group ${displayMode ? 'bg-cyan-900/40' : 'bg-zinc-700'}`}>
-              <Info size={16} className={displayMode ? 'text-cyan-400' : 'text-zinc-300 group-hover:text-white'} />
-              <span className={`text-[8px] font-bold tracking-widest uppercase ${displayMode ? 'text-cyan-400' : 'text-zinc-400'}`}>Info</span>
-            </button>
-
-          </div>
-
-          {/* PAINEL DE EQUALIZAÇÃO E VOLUME (3 SLIDERS) */}
-          <div className="mt-4 bg-zinc-900 rounded-xl p-4 border-2 border-zinc-950 shadow-inner flex flex-col gap-3">
-            <style dangerouslySetInnerHTML={{__html: `
-              .fader-thumb::-webkit-slider-thumb { appearance: none; width: 16px; height: 24px; background: #52525b; border: 2px solid #27272a; border-radius: 4px; cursor: grab; box-shadow: 0 2px 4px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.2); }
-              .fader-thumb::-webkit-slider-thumb:active { cursor: grabbing; }
-            `}} />
-            
-            {/* VOL SLIDER */}
-            <div className="flex items-center gap-4">
-              <span className="text-[10px] font-mono font-bold text-zinc-500 w-8 text-right">VOL</span>
-              <div className="relative flex-1 h-2 bg-black rounded-full shadow-inner flex items-center">
-                <input type="range" min="0" max="1" step="0.01" value={volume} onChange={(e) => { setVolume(parseFloat(e.target.value)); if (isMuted) toggleMute(); }} className="fader-thumb absolute w-full h-full appearance-none bg-transparent outline-none z-10" />
-                <div className="h-full rounded-full transition-all bg-cyan-400 opacity-60" style={{ width: `${volume * 100}%` }}></div>
-              </div>
+              <button onClick={toggleDisplay} className={`h-14 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group ${displayMode ? 'bg-cyan-900/40' : 'bg-zinc-700'}`}>
+                <Info size={16} className={displayMode ? 'text-cyan-400' : 'text-zinc-300 group-hover:text-white'} />
+                <span className={`text-[8px] font-bold tracking-widest uppercase ${displayMode ? 'text-cyan-400' : 'text-zinc-400'}`}>Info</span>
+              </button>
             </div>
 
-            {/* BASS SLIDER */}
-            <div className="flex items-center gap-4">
-              <span className="text-[10px] font-mono font-bold text-zinc-500 w-8 text-right">BASS</span>
-              <div className="relative flex-1 h-2 bg-black rounded-full shadow-inner flex items-center">
-                <input type="range" min="-15" max="15" step="1" value={bass} onChange={(e) => setBass(parseInt(e.target.value))} className="fader-thumb absolute w-full h-full appearance-none bg-transparent outline-none z-10" />
-                <div className="absolute left-1/2 w-0.5 h-3 bg-zinc-700 -translate-x-1/2"></div>
-                <div className="h-full rounded-full bg-amber-500 opacity-40 transition-all" style={{ width: `${((bass + 15) / 30) * 100}%` }}></div>
+            <div className="mt-4 bg-zinc-900 rounded-xl p-4 border-2 border-zinc-950 shadow-inner flex flex-col gap-3">
+              <style dangerouslySetInnerHTML={{__html: `
+                .fader-thumb::-webkit-slider-thumb { appearance: none; width: 16px; height: 24px; background: #52525b; border: 2px solid #27272a; border-radius: 4px; cursor: grab; box-shadow: 0 2px 4px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.2); }
+                .fader-thumb::-webkit-slider-thumb:active { cursor: grabbing; }
+              `}} />
+              
+              <div className="flex items-center gap-4">
+                <span className="text-[10px] font-mono font-bold text-zinc-500 w-8 text-right">VOL</span>
+                <div className="relative flex-1 h-2 bg-black rounded-full shadow-inner flex items-center">
+                  <input type="range" min="0" max="1" step="0.01" value={volume} onChange={(e) => { setVolume(parseFloat(e.target.value)); if (isMuted) toggleMute(); }} className="fader-thumb absolute w-full h-full appearance-none bg-transparent outline-none z-10" />
+                  <div className="h-full rounded-full transition-all bg-cyan-400 opacity-60" style={{ width: `${volume * 100}%` }}></div>
+                </div>
               </div>
-            </div>
 
-            {/* TREBLE SLIDER */}
-            <div className="flex items-center gap-4">
-              <span className="text-[10px] font-mono font-bold text-zinc-500 w-8 text-right">TREB</span>
-              <div className="relative flex-1 h-2 bg-black rounded-full shadow-inner flex items-center">
-                <input type="range" min="-15" max="15" step="1" value={treble} onChange={(e) => setTreble(parseInt(e.target.value))} className="fader-thumb absolute w-full h-full appearance-none bg-transparent outline-none z-10" />
-                <div className="absolute left-1/2 w-0.5 h-3 bg-zinc-700 -translate-x-1/2"></div>
-                <div className="h-full rounded-full bg-orange-500 opacity-40 transition-all" style={{ width: `${((treble + 15) / 30) * 100}%` }}></div>
+              <div className="flex items-center gap-4">
+                <span className="text-[10px] font-mono font-bold text-zinc-500 w-8 text-right">BASS</span>
+                <div className="relative flex-1 h-2 bg-black rounded-full shadow-inner flex items-center">
+                  <input type="range" min="-15" max="15" step="1" value={bass} onChange={(e) => setBass(parseInt(e.target.value))} className="fader-thumb absolute w-full h-full appearance-none bg-transparent outline-none z-10" />
+                  <div className="absolute left-1/2 w-0.5 h-3 bg-zinc-700 -translate-x-1/2"></div>
+                  <div className="h-full rounded-full bg-amber-500 opacity-40 transition-all" style={{ width: `${((bass + 15) / 30) * 100}%` }}></div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <span className="text-[10px] font-mono font-bold text-zinc-500 w-8 text-right">TREB</span>
+                <div className="relative flex-1 h-2 bg-black rounded-full shadow-inner flex items-center">
+                  <input type="range" min="-15" max="15" step="1" value={treble} onChange={(e) => setTreble(parseInt(e.target.value))} className="fader-thumb absolute w-full h-full appearance-none bg-transparent outline-none z-10" />
+                  <div className="absolute left-1/2 w-0.5 h-3 bg-zinc-700 -translate-x-1/2"></div>
+                  <div className="h-full rounded-full bg-orange-500 opacity-40 transition-all" style={{ width: `${((treble + 15) / 30) * 100}%` }}></div>
+                </div>
               </div>
             </div>
 
           </div>
-
         </div>
-      </div>
+      </section>
+
+      {/* FEATURES SECTION */}
+      <section id="features" className="py-24 bg-zinc-900 border-t border-zinc-800 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-5xl font-black mb-4">Hardware Features. <span className="text-cyan-400">Software Magic.</span></h2>
+            <p className="text-zinc-400 max-w-2xl mx-auto">Tudo o que se espera de um rádio de cabeceira topo de gama, construído puramente com tecnologias web modernas.</p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="bg-zinc-800 p-6 rounded-2xl border border-zinc-700/50 hover:border-cyan-500/50 transition-colors">
+              <Headphones className="text-cyan-400 mb-4" size={32} />
+              <h3 className="text-xl font-bold mb-2">Web Audio API</h3>
+              <p className="text-zinc-400 text-sm">Processamento de sinal em tempo real. Equalizador mecânico e analisador de espectro de alta precisão (FFT 64).</p>
+            </div>
+            <div className="bg-zinc-800 p-6 rounded-2xl border border-zinc-700/50 hover:border-orange-500/50 transition-colors">
+              <Disc className="text-orange-500 mb-4" size={32} />
+              <h3 className="text-xl font-bold mb-2">Vinyl & AM FX</h3>
+              <p className="text-zinc-400 text-sm">Filtros *Lowpass* e *Bandpass* algoritmos que cortam frequências para emular a imperfeição acolhedora do som analógico e cassetes.</p>
+            </div>
+            <div className="bg-zinc-800 p-6 rounded-2xl border border-zinc-700/50 hover:border-emerald-500/50 transition-colors">
+              <Cpu className="text-emerald-500 mb-4" size={32} />
+              <h3 className="text-xl font-bold mb-2">Memória EEPROM</h3>
+              <p className="text-zinc-400 text-sm">Tal como num rádio real, o estado é preservado. Favoritos, volume, equalização e os *Presets* P1-P3 nunca são esquecidos.</p>
+            </div>
+            <div className="bg-zinc-800 p-6 rounded-2xl border border-zinc-700/50 hover:border-purple-500/50 transition-colors">
+              <Layers className="text-purple-500 mb-4" size={32} />
+              <h3 className="text-xl font-bold mb-2">Skeuomorphic UI</h3>
+              <p className="text-zinc-400 text-sm">Design focado no aspeto tátil, com botões mecânicos, cliques reativos e um ecrã LCD com luz de fundo controlável.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* TECH STACK SECTION */}
+      <section id="tech" className="py-24 bg-zinc-950 px-6">
+        <div className="max-w-4xl mx-auto text-center">
+          <Code2 className="text-zinc-500 mx-auto mb-6" size={48} />
+          <h2 className="text-3xl font-black mb-6">Desenvolvido por Luis Paulo</h2>
+          <p className="text-zinc-400 text-lg leading-relaxed mb-8">
+            Estudante de Análise e Desenvolvimento de Sistemas com foco em engenharia Full Stack. O projeto Radio Arch demonstra a capacidade de combinar manipulação avançada da DOM, gestão de estado complexa em React, e arquitetura baseada em eventos (Web Audio API) numa interface altamente responsiva estilizada com Tailwind CSS.
+          </p>
+          <a href="https://github.com/LuisPauloCN507/RadioArch" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white px-6 py-3 rounded-full font-bold transition-colors">
+            Ver Código no GitHub
+          </a>
+        </div>
+      </section>
+
+      {/* FOOTER */}
+      <footer className="py-8 bg-black border-t border-zinc-900 text-center">
+        <p className="text-zinc-600 font-mono text-xs">
+          © {new Date().getFullYear()} Radio Arch | Criado com <span className="text-cyan-500">Next.js</span> & <span className="text-cyan-500">Tailwind CSS</span>
+        </p>
+      </footer>
       
       <div className="hidden">
         <Player currentRadio={currentRadio} isPlaying={isPlaying} onPlayPause={() => setIsPlaying(!isPlaying)} volume={volume} onVolumeChange={setVolume} isFavorite={favorites.includes(currentRadio?.id)} toggleFavorite={handleToggleFavorite} />
       </div>
-    </main>
+    </div>
   );
 }
