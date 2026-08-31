@@ -2,10 +2,17 @@
 
 import Player from '@/components/Player';
 import { radioList } from '@/data/radios';
-import { ChevronDown, ChevronUp, Heart, Play, Square, Timer, Volume2, VolumeX, Info, Radio, Lightbulb, Code2, Cpu, Layers, MapPin, RadioReceiver, Disc, Headphones } from 'lucide-react';
+import { ChevronDown, ChevronUp, Code2, Heart, Info, Lightbulb, MapPin, Palette, Play, Radio, RadioReceiver, Square, Timer, Volume2, VolumeX } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 const VERTICAL_SPACING = 180; 
+
+const lcdThemes = [
+  { name: 'CYAN', hex: '#22d3ee', bg: 'bg-cyan-900/30', text: 'text-cyan-400', shadow: 'rgba(34,211,238,0.5)' },
+  { name: 'PAPAYA', hex: '#f97316', bg: 'bg-orange-900/30', text: 'text-orange-500', shadow: 'rgba(249,115,22,0.5)' },
+  { name: 'ARCH', hex: '#1793d1', bg: 'bg-sky-900/30', text: 'text-sky-400', shadow: 'rgba(23,147,209,0.5)' },
+  { name: 'TERMINAL', hex: '#22c55e', bg: 'bg-green-900/30', text: 'text-green-500', shadow: 'rgba(34,197,94,0.5)' }
+];
 
 // COMPONENTE DE ANIMAÇÃO NO SCROLL
 function FadeInSection({ children, delay = 0 }) {
@@ -36,7 +43,7 @@ function FadeInSection({ children, delay = 0 }) {
 }
 
 // COMPONENTE DO COVER FLOW VERTICAL
-function VerticalDeckItem({ radio, isCenter, offset, onSelect }) {
+function VerticalDeckItem({ radio, isCenter, offset, onSelect, activeTheme }) {
   const isVisible = Math.abs(offset) <= 2;
   
   return (
@@ -49,7 +56,8 @@ function VerticalDeckItem({ radio, isCenter, offset, onSelect }) {
         filter: isCenter ? 'none' : 'grayscale(80%) brightness(40%)',
       }}
     >
-      <div className={`transition-all duration-500 w-64 h-40 flex items-center justify-center ${isCenter ? 'drop-shadow-[0_0_15px_rgba(34,211,238,0.5)] scale-110' : 'drop-shadow-md'}`}>
+      <div className={`transition-all duration-500 w-64 h-40 flex items-center justify-center ${isCenter ? 'scale-110' : 'drop-shadow-md'}`}
+           style={{ dropShadow: isCenter ? `0 0 15px ${activeTheme.shadow}` : 'none' }}>
         {radio.logo ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img 
@@ -84,6 +92,7 @@ export default function Home() {
   const [displayMode, setDisplayMode] = useState(false);
   const [band, setBand] = useState('FM'); 
   const [backlight, setBacklight] = useState(true);
+  const [themeIndex, setThemeIndex] = useState(0);
   
   const audioRef = useRef(null);
   const canvasRef = useRef(null);
@@ -95,7 +104,8 @@ export default function Home() {
   
   const amFilterRef = useRef(null);
   
-  const lcdColor = backlight ? '#22d3ee' : '#1e3a8a';
+  const activeTheme = lcdThemes[themeIndex];
+  const lcdColor = backlight ? activeTheme.hex : '#1e3a8a';
   const lcdColorRef = useRef(lcdColor);
 
   useEffect(() => {
@@ -238,6 +248,11 @@ export default function Home() {
     playClickSound();
   }, [playClickSound]);
 
+  const cycleTheme = useCallback(() => {
+    setThemeIndex((prev) => (prev + 1) % lcdThemes.length);
+    playSystemBeep(1000 + (themeIndex * 200), 'sine', 0.05); 
+  }, [themeIndex, playSystemBeep]);
+
   const displayRadios = radioList;
 
   useEffect(() => {
@@ -245,15 +260,18 @@ export default function Home() {
       const savedIndex = localStorage.getItem('radioarch_index');
       const savedVolume = localStorage.getItem('radioarch_volume');
       const savedFavs = localStorage.getItem('radioarch_favs');
+      const savedTheme = localStorage.getItem('radioarch_theme');
       
       if (savedIndex !== null) setActiveIndex(parseInt(savedIndex, 10));
       if (savedVolume !== null) setVolume(parseFloat(savedVolume));
       if (savedFavs) setFavorites(JSON.parse(savedFavs));
+      if (savedTheme !== null) setThemeIndex(parseInt(savedTheme, 10));
     }, 0);
     return () => cancelAnimationFrame(requestRef.current);
   }, []);
 
   useEffect(() => { localStorage.setItem('radioarch_index', activeIndex.toString()); }, [activeIndex]);
+  useEffect(() => { localStorage.setItem('radioarch_theme', themeIndex.toString()); }, [themeIndex]);
   useEffect(() => { 
     localStorage.setItem('radioarch_volume', volume.toString());
     if (audioRef.current) audioRef.current.volume = isMuted ? 0 : volume;
@@ -421,25 +439,25 @@ export default function Home() {
       <nav className="fixed top-0 w-full z-50 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-900/50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <RadioReceiver className="text-cyan-400" size={24} />
+            <RadioReceiver className={activeTheme.text} size={24} />
             <span className="font-mono font-bold tracking-widest uppercase text-lg">
-              RADIO<span className="text-orange-500">ARCH</span>
+              RADIO<span className="text-zinc-500">ARCH</span>
             </span>
           </div>
           <div className="hidden md:flex gap-8 text-sm font-medium text-zinc-400">
-            <a href="#app" className="hover:text-cyan-400 transition-colors">Player</a>
-            <a href="#stations" className="hover:text-cyan-400 transition-colors">Estações</a>
-            <a href="#guide" className="hover:text-cyan-400 transition-colors">Guia</a>
-            <a href="#developer" className="hover:text-cyan-400 transition-colors">Dev</a>
+            <a href="#app" className={`hover:${activeTheme.text} transition-colors`}>Player</a>
+            <a href="#stations" className={`hover:${activeTheme.text} transition-colors`}>Estações</a>
+            <a href="#guide" className={`hover:${activeTheme.text} transition-colors`}>Guia</a>
+            <a href="#developer" className={`hover:${activeTheme.text} transition-colors`}>Dev</a>
           </div>
-          <button onClick={() => { document.getElementById('app').scrollIntoView({ behavior: 'smooth' }); }} className="bg-cyan-500 hover:bg-cyan-400 text-black px-4 py-2 rounded-md font-bold text-sm transition-colors shadow-[0_0_15px_rgba(34,211,238,0.3)]">
+          <button onClick={() => { document.getElementById('app').scrollIntoView({ behavior: 'smooth' }); }} className="bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2 rounded-md font-bold text-sm transition-colors border border-zinc-700">
             Sintonizar
           </button>
         </div>
       </nav>
 
       <section id="app" className="pt-32 pb-24 px-4 md:px-8 flex flex-col items-center justify-center min-h-screen relative">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-200 h-150 bg-cyan-900/20 blur-[120px] rounded-full pointer-events-none"></div>
+        <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-200 h-150 rounded-full pointer-events-none blur-[150px] transition-colors duration-1000 ${activeTheme.bg} opacity-20`}></div>
 
         <FadeInSection>
           <div className="text-center mb-12 relative z-10">
@@ -465,7 +483,7 @@ export default function Home() {
                   const isCenter = index === safeIndex;
                   const offset = index - safeIndex;
                   return (
-                    <VerticalDeckItem key={radio.id} radio={radio} isCenter={isCenter} offset={offset} onSelect={() => { changeRadio(index); if (!isPlaying) togglePlay(); }} />
+                    <VerticalDeckItem key={radio.id} radio={radio} isCenter={isCenter} offset={offset} onSelect={() => { changeRadio(index); if (!isPlaying) togglePlay(); }} activeTheme={activeTheme} />
                   );
                 })}
               </div>
@@ -481,12 +499,12 @@ export default function Home() {
                 
                 <div className="flex justify-between items-start w-full relative z-10">
                   <div className="flex flex-col gap-1">
-                    <h1 className={`text-lg font-black tracking-[0.3em] uppercase italic font-mono flex items-center gap-4 transition-all ${backlight ? 'opacity-60 text-white' : 'opacity-30 text-zinc-600'}`}>
-                      <span>RADIO<span className={backlight ? 'text-orange-500' : 'text-orange-900'}>ARCH</span></span>
+                    <h1 className={`text-lg font-black tracking-[0.3em] uppercase italic font-mono flex items-center gap-4 transition-all ${backlight ? 'opacity-80 text-white' : 'opacity-30 text-zinc-600'}`}>
+                      <span>RADIO<span className={activeTheme.text}>ARCH</span></span>
                     </h1>
                     <div className="flex gap-2 font-mono text-[9px] tracking-widest font-bold">
                       <span className={`${band === 'AM' ? 'text-amber-500' : 'text-zinc-800'}`}>[AM]</span>
-                      <span className={`${band === 'FM' ? 'text-cyan-400' : 'text-zinc-800'}`}>[FM]</span>
+                      <span className={`${band === 'FM' ? activeTheme.text : 'text-zinc-800'}`}>[FM]</span>
                       <span className={`${isMuted ? 'text-red-500 animate-pulse' : 'text-zinc-800'}`}>[MUTED]</span>
                     </div>
                   </div>
@@ -494,7 +512,7 @@ export default function Home() {
                   <div className="flex flex-col items-end transition-colors" style={{ color: lcdColor }}>
                     <div className="flex items-center gap-3 mb-1">
                       {sleepTimer > 0 && <span className="text-zinc-500 text-[10px] font-mono tracking-widest">⏱ {formatTime(timeLeft)}</span>}
-                      <span className={`text-lg font-mono font-bold tracking-widest ${backlight ? 'drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]' : ''}`}>
+                      <span className={`text-lg font-mono font-bold tracking-widest`} style={{ textShadow: backlight ? `0 0 8px ${activeTheme.shadow}` : 'none' }}>
                         {currentTime}
                       </span>
                     </div>
@@ -517,42 +535,48 @@ export default function Home() {
                   </div>
 
                   <div className={`w-full flex flex-col gap-1.5 font-mono text-[10px] opacity-90 transition-colors ${displayMode ? 'block' : 'hidden'}`} style={{ color: lcdColor }}>
-                    <p className={`border-b pb-1 mb-1 font-bold ${backlight ? 'border-cyan-900 text-white' : 'border-zinc-800 text-zinc-400'}`}>SYSTEM DIAGNOSTICS</p>
+                    <p className={`border-b pb-1 mb-1 font-bold ${backlight ? 'border-current text-white' : 'border-zinc-800 text-zinc-400'}`}>SYSTEM DIAGNOSTICS</p>
                     <p>FREQ: {(88.0 + safeIndex * 2.4).toFixed(1)} MHz</p>
                     <p>BAND: {band} / RESOLUTION: HQ STREAM</p>
+                    <p>COLOR: {activeTheme.name} / BACKLIGHT: {backlight ? 'ON' : 'OFF'}</p>
                     <p>STATUS: {isLoading ? 'SYNCING...' : (isPlaying ? 'ACTIVE' : 'IDLE')}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="flex flex-wrap justify-center gap-3 mt-8 px-2">
-                <button onClick={togglePlay} className="w-14 h-14 bg-zinc-700 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group">
-                  {isPlaying ? <Square size={16} className="text-cyan-400" /> : <Play size={16} className="text-zinc-300 group-hover:text-white" />}
+              {/* PAINEL DE BOTÕES - AGORA COM 8 BOTÕES (GRID PERFEITA 4x2) */}
+              <div className="grid grid-cols-4 md:flex md:flex-wrap justify-center gap-3 mt-8 px-2">
+                <button onClick={togglePlay} className="h-14 md:w-14 bg-zinc-700 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group">
+                  {isPlaying ? <Square size={16} className={activeTheme.text} /> : <Play size={16} className="text-zinc-300 group-hover:text-white" />}
                   <span className="text-[8px] font-bold tracking-widest uppercase text-zinc-400">Pwr</span>
                 </button>
-                <button onClick={() => { handleToggleFavorite(); playClickSound(); }} className="w-14 h-14 bg-zinc-700 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group">
+                <button onClick={handleToggleFavorite} className="h-14 md:w-14 bg-zinc-700 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group">
                   <Heart size={16} className={favorites.includes(currentRadio?.id) ? 'text-red-500 fill-red-500' : 'text-zinc-300 group-hover:text-white'} />
                   <span className="text-[8px] font-bold tracking-widest uppercase text-zinc-400">Fav</span>
                 </button>
-                <button onClick={toggleBand} className={`w-14 h-14 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group ${band === 'AM' ? 'bg-amber-900/40' : 'bg-zinc-700'}`}>
-                  <Radio size={16} className={band === 'AM' ? 'text-amber-500' : 'text-cyan-400'} />
-                  <span className={`text-[8px] font-bold tracking-widest uppercase ${band === 'AM' ? 'text-amber-500' : 'text-cyan-400'}`}>{band}</span>
+                <button onClick={toggleBand} className={`h-14 md:w-14 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group ${band === 'AM' ? 'bg-amber-900/40' : 'bg-zinc-700'}`}>
+                  <Radio size={16} className={band === 'AM' ? 'text-amber-500' : activeTheme.text} />
+                  <span className={`text-[8px] font-bold tracking-widest uppercase ${band === 'AM' ? 'text-amber-500' : activeTheme.text}`}>{band}</span>
                 </button>
-                <button onClick={toggleBacklight} className={`w-14 h-14 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group ${backlight ? 'bg-cyan-900/30' : 'bg-zinc-800'}`}>
-                  <Lightbulb size={16} className={backlight ? 'text-cyan-400' : 'text-zinc-600'} />
-                  <span className={`text-[8px] font-bold tracking-widest uppercase ${backlight ? 'text-cyan-400' : 'text-zinc-600'}`}>Lite</span>
+                <button onClick={toggleBacklight} className={`h-14 md:w-14 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group ${backlight ? activeTheme.bg : 'bg-zinc-800'}`}>
+                  <Lightbulb size={16} className={backlight ? activeTheme.text : 'text-zinc-600'} />
+                  <span className={`text-[8px] font-bold tracking-widest uppercase ${backlight ? activeTheme.text : 'text-zinc-600'}`}>Lite</span>
                 </button>
-                <button onClick={cycleTimer} className={`w-14 h-14 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group ${sleepTimer > 0 ? 'bg-cyan-900/40' : 'bg-zinc-700'}`}>
-                  <Timer size={16} className={sleepTimer > 0 ? 'text-cyan-400' : 'text-zinc-300 group-hover:text-white'} />
-                  <span className={`text-[8px] font-bold tracking-widest uppercase ${sleepTimer > 0 ? 'text-cyan-400' : 'text-zinc-400'}`}>Slp</span>
+                <button onClick={cycleTimer} className={`h-14 md:w-14 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group ${sleepTimer > 0 ? activeTheme.bg : 'bg-zinc-700'}`}>
+                  <Timer size={16} className={sleepTimer > 0 ? activeTheme.text : 'text-zinc-300 group-hover:text-white'} />
+                  <span className={`text-[8px] font-bold tracking-widest uppercase ${sleepTimer > 0 ? activeTheme.text : 'text-zinc-400'}`}>Slp</span>
                 </button>
-                <button onClick={toggleMute} className={`w-14 h-14 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group ${isMuted ? 'bg-red-900/30 border-red-900' : 'bg-zinc-700'}`}>
+                <button onClick={toggleMute} className={`h-14 md:w-14 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group ${isMuted ? 'bg-red-900/30 border-red-900' : 'bg-zinc-700'}`}>
                   {isMuted ? <VolumeX size={16} className="text-red-500" /> : <Volume2 size={16} className="text-zinc-300 group-hover:text-white" />}
                   <span className={`text-[8px] font-bold tracking-widest uppercase ${isMuted ? 'text-red-500' : 'text-zinc-400'}`}>Mut</span>
                 </button>
-                <button onClick={toggleDisplay} className={`w-14 h-14 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group ${displayMode ? 'bg-cyan-900/40' : 'bg-zinc-700'}`}>
-                  <Info size={16} className={displayMode ? 'text-cyan-400' : 'text-zinc-300 group-hover:text-white'} />
-                  <span className={`text-[8px] font-bold tracking-widest uppercase ${displayMode ? 'text-cyan-400' : 'text-zinc-400'}`}>Info</span>
+                <button onClick={toggleDisplay} className={`h-14 md:w-14 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group ${displayMode ? activeTheme.bg : 'bg-zinc-700'}`}>
+                  <Info size={16} className={displayMode ? activeTheme.text : 'text-zinc-300 group-hover:text-white'} />
+                  <span className={`text-[8px] font-bold tracking-widest uppercase ${displayMode ? activeTheme.text : 'text-zinc-400'}`}>Info</span>
+                </button>
+                <button onClick={cycleTheme} className={`h-14 md:w-14 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group bg-zinc-800 hover:bg-zinc-700`}>
+                  <Palette size={16} className={activeTheme.text} />
+                  <span className={`text-[8px] font-bold tracking-widest uppercase ${activeTheme.text}`}>Cor</span>
                 </button>
               </div>
 
@@ -564,7 +588,7 @@ export default function Home() {
                 <span className="text-xs font-mono font-bold text-zinc-500">MIN</span>
                 <div className="relative flex-1 h-3 bg-black rounded-full shadow-inner flex items-center">
                   <input type="range" min="0" max="1" step="0.01" value={volume} onChange={(e) => { setVolume(parseFloat(e.target.value)); if (isMuted) toggleMute(); }} className="fader-thumb absolute w-full h-full appearance-none bg-transparent outline-none z-10" />
-                  <div className="h-full rounded-full transition-all bg-cyan-400 opacity-60" style={{ width: `${volume * 100}%` }}></div>
+                  <div className={`h-full rounded-full transition-all opacity-80`} style={{ width: `${volume * 100}%`, backgroundColor: activeTheme.hex }}></div>
                 </div>
                 <span className="text-xs font-mono font-bold text-zinc-500">MAX</span>
               </div>
@@ -578,7 +602,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto">
           <FadeInSection>
             <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-5xl font-black mb-4">Sintoniza a <span className="text-cyan-400">Tua Vibe.</span></h2>
+              <h2 className="text-3xl md:text-5xl font-black mb-4">Sintoniza a <span className={activeTheme.text}>Tua Vibe.</span></h2>
               <p className="text-zinc-400 max-w-2xl mx-auto">Uma curadoria premium de frequências e géneros para acompanhar qualquer momento do teu dia.</p>
             </div>
           </FadeInSection>
@@ -586,13 +610,13 @@ export default function Home() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {displayRadios.slice(0, 4).map((r, i) => (
               <FadeInSection key={r.id} delay={i * 100}>
-                <div className="bg-zinc-950/50 p-6 rounded-2xl border border-zinc-800 flex flex-col items-center text-center hover:border-cyan-500/30 transition-colors group cursor-pointer" onClick={() => changeRadio(i)}>
+                <div className="bg-zinc-950/50 p-6 rounded-2xl border border-zinc-800 flex flex-col items-center text-center hover:border-zinc-500/50 transition-colors group cursor-pointer" onClick={() => changeRadio(i)}>
                   <div className="w-24 h-24 mb-4 drop-shadow-md group-hover:scale-110 transition-transform">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={r.logo} alt={r.name} className="w-full h-full object-contain" />
                   </div>
                   <h3 className="font-bold text-white mb-1">{r.name}</h3>
-                  <p className="text-xs font-mono text-cyan-400">[{r.genre}]</p>
+                  <p className={`text-xs font-mono ${activeTheme.text}`}>[{r.genre}]</p>
                 </div>
               </FadeInSection>
             ))}
@@ -605,27 +629,27 @@ export default function Home() {
           <FadeInSection>
             <div className="flex flex-col md:flex-row items-center gap-16">
               <div className="md:w-1/2">
-                <h2 className="text-3xl md:text-4xl font-black mb-8">Hardware <span className="text-cyan-400">Reference Guide.</span></h2>
+                <h2 className="text-3xl md:text-4xl font-black mb-8">Hardware <span className={activeTheme.text}>Reference Guide.</span></h2>
                 <div className="space-y-6">
                   <div className="flex gap-4 items-start">
-                    <div className="w-10 h-10 bg-zinc-800 rounded flex items-center justify-center shrink-0 border border-zinc-700"><Timer size={20} className="text-cyan-400"/></div>
+                    <div className="w-10 h-10 bg-zinc-800 rounded flex items-center justify-center shrink-0 border border-zinc-700"><Timer size={20} className={activeTheme.text}/></div>
                     <div>
                       <h4 className="font-bold text-lg">Sleep Timer</h4>
                       <p className="text-zinc-400 text-sm">Configura o rádio para desligar automaticamente após 15, 30 ou 60 minutos. Ideal para focares nos estudos ou dormir a ouvir Lo-Fi.</p>
                     </div>
                   </div>
                   <div className="flex gap-4 items-start">
-                    <div className="w-10 h-10 bg-zinc-800 rounded flex items-center justify-center shrink-0 border border-zinc-700"><Radio size={20} className="text-cyan-400"/></div>
+                    <div className="w-10 h-10 bg-zinc-800 rounded flex items-center justify-center shrink-0 border border-zinc-700"><Radio size={20} className={activeTheme.text}/></div>
                     <div>
                       <h4 className="font-bold text-lg">AM / FM Toggle</h4>
                       <p className="text-zinc-400 text-sm">Alterna o sinal. O modo FM (padrão) entrega alta fidelidade (24kHz). O modo AM aplica um filtro bandpass analógico e gera estática real no áudio.</p>
                     </div>
                   </div>
                   <div className="flex gap-4 items-start">
-                    <div className="w-10 h-10 bg-zinc-800 rounded flex items-center justify-center shrink-0 border border-zinc-700"><Info size={20} className="text-cyan-400"/></div>
+                    <div className="w-10 h-10 bg-zinc-800 rounded flex items-center justify-center shrink-0 border border-zinc-700"><Palette size={20} className={activeTheme.text}/></div>
                     <div>
-                      <h4 className="font-bold text-lg">Diagnostic Mode</h4>
-                      <p className="text-zinc-400 text-sm">Oculta temporariamente o analisador de espectro em tempo real para exibir dados da framework, atalhos de teclado e meta-informação da stream.</p>
+                      <h4 className="font-bold text-lg">Display Colorways</h4>
+                      <p className="text-zinc-400 text-sm">Altera a cor do LCD para combinar com o teu ambiente. Inclui temas inspirados em setups de hardware, distros Linux e desporto automóvel.</p>
                     </div>
                   </div>
                 </div>
@@ -644,12 +668,12 @@ export default function Home() {
         <FadeInSection>
           <div className="max-w-3xl mx-auto text-center">
             
-            <div className="w-24 h-24 mx-auto bg-zinc-800 rounded-full border-2 border-cyan-500 mb-6 flex items-center justify-center text-3xl font-bold text-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.2)]">
+            <div className={`w-24 h-24 mx-auto bg-zinc-800 rounded-full border-2 ${activeTheme.border} mb-6 flex items-center justify-center text-3xl font-bold ${activeTheme.text} transition-colors duration-500`} style={{ boxShadow: `0 0 20px ${activeTheme.shadow}` }}>
               L3
             </div>
             
             <h2 className="text-3xl font-black mb-2">Luis Paulo <span className="text-zinc-500">(@Lupd3v)</span></h2>
-            <div className="flex items-center justify-center gap-2 text-cyan-400 font-mono text-sm mb-6">
+            <div className={`flex items-center justify-center gap-2 ${activeTheme.text} font-mono text-sm mb-6`}>
               <MapPin size={16} /> Piauí, Brasil
             </div>
             
@@ -665,7 +689,7 @@ export default function Home() {
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
                 GitHub
               </a>
-              <a href="#" className="inline-flex items-center gap-2 bg-cyan-600 hover:bg-cyan-500 text-black px-6 py-3 rounded-xl font-bold transition-colors shadow-[0_0_15px_rgba(34,211,238,0.2)]">
+              <a href="#" className={`inline-flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white px-6 py-3 rounded-xl font-bold transition-colors border border-zinc-700`} style={{ boxShadow: `0 0 15px ${activeTheme.shadow}` }}>
                  Contactar
               </a>
             </div>
@@ -675,7 +699,7 @@ export default function Home() {
 
       <footer className="py-8 bg-black text-center">
         <p className="text-zinc-600 font-mono text-xs">
-          © {new Date().getFullYear()} Lupd3v | Criado com <span className="text-cyan-500">Next.js</span> & <span className="text-cyan-500">Tailwind CSS</span>
+          © {new Date().getFullYear()} Lupd3v | Criado com <span className={activeTheme.text}>Next.js</span> & <span className={activeTheme.text}>Tailwind CSS</span>
         </p>
       </footer>
       
