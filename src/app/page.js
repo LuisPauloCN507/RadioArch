@@ -2,7 +2,7 @@
 
 import Player from '@/components/Player';
 import { radioList } from '@/data/radios';
-import { ChevronDown, ChevronUp, Code2, Heart, Info, Lightbulb, MapPin, Palette, Play, Radio, RadioReceiver, Square, Timer, Volume2, VolumeX } from 'lucide-react';
+import { ChevronDown, ChevronUp, Code2, Disc, Heart, Info, Lightbulb, MapPin, Palette, Play, Radio, RadioReceiver, Square, Timer, Volume2, VolumeX } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 const VERTICAL_SPACING = 180; 
@@ -93,6 +93,7 @@ export default function Home() {
   const [band, setBand] = useState('FM'); 
   const [backlight, setBacklight] = useState(true);
   const [themeIndex, setThemeIndex] = useState(0);
+  const [isRecording, setIsRecording] = useState(false);
   
   const audioRef = useRef(null);
   const canvasRef = useRef(null);
@@ -104,6 +105,10 @@ export default function Home() {
   
   const amFilterRef = useRef(null);
   
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const streamDestRef = useRef(null);
+
   const activeTheme = lcdThemes[themeIndex];
   const lcdColor = backlight ? activeTheme.hex : '#1e3a8a';
   const lcdColorRef = useRef(lcdColor);
@@ -186,6 +191,14 @@ export default function Home() {
     }
   }, []);
 
+  // NOVO: Função isolada e segura para parar a gravação
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+    setIsRecording(false);
+  }, []);
+
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
@@ -204,6 +217,8 @@ export default function Home() {
           if (prev <= 1) {
             setIsPlaying(false);
             setSleepTimer(0);
+            // Executa fora do ciclo de renderização síncrono para evitar aviso do ESLint
+            setTimeout(() => stopRecording(), 0); 
             return 0;
           }
           return prev - 1;
@@ -211,7 +226,7 @@ export default function Home() {
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [sleepTimer, isPlaying]);
+  }, [sleepTimer, isPlaying, stopRecording]);
 
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -254,6 +269,47 @@ export default function Home() {
   }, [themeIndex, playSystemBeep]);
 
   const displayRadios = radioList;
+  const currentRadio = displayRadios[activeIndex >= displayRadios.length ? 0 : activeIndex];
+
+  // SISTEMA DE GRAVAÇÃO (REC) - Agora focado apenas no seu dever
+  const toggleRecord = useCallback(() => {
+    if (!isPlaying || !audioCtxRef.current) return;
+
+    if (isRecording) {
+      stopRecording();
+      playClickSound();
+    } else {
+      try {
+        audioChunksRef.current = [];
+        if (!streamDestRef.current) {
+          streamDestRef.current = audioCtxRef.current.createMediaStreamDestination();
+          analyserRef.current.connect(streamDestRef.current);
+        }
+
+        mediaRecorderRef.current = new MediaRecorder(streamDestRef.current.stream);
+
+        mediaRecorderRef.current.ondataavailable = (e) => {
+          if (e.data.size > 0) audioChunksRef.current.push(e.data);
+        };
+
+        mediaRecorderRef.current.onstop = () => {
+          const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `RadioArch_${currentRadio?.name.replace(/\s+/g, '_') || 'Recording'}.webm`;
+          a.click();
+          URL.revokeObjectURL(url);
+        };
+
+        mediaRecorderRef.current.start();
+        setIsRecording(true);
+        playSystemBeep(1500, 'square', 0.1);
+      } catch (err) {
+        console.error('Erro ao iniciar gravação:', err);
+      }
+    }
+  }, [isPlaying, isRecording, playClickSound, playSystemBeep, currentRadio, stopRecording]);
 
   useEffect(() => {
     setTimeout(() => {
@@ -292,7 +348,6 @@ export default function Home() {
 
   const radioCount = displayRadios.length;
   const safeIndex = activeIndex >= radioCount ? 0 : activeIndex;
-  const currentRadio = displayRadios[safeIndex];
   
   const previousIndex = (safeIndex - 1 + radioCount) % radioCount;
   const nextIndex = (safeIndex + 1) % radioCount;
@@ -350,10 +405,14 @@ export default function Home() {
   }, []);
 
   const togglePlay = useCallback(() => {
-    if (!isPlaying) setIsLoading(true); 
+    if (!isPlaying) {
+      setIsLoading(true); 
+    } else {
+      if (isRecording) stopRecording(); // Paramos a gravação AQUI, antes do estado de play mudar
+    }
     setIsPlaying((prev) => !prev);
     playClickSound(); 
-  }, [isPlaying, playClickSound]);
+  }, [isPlaying, isRecording, stopRecording, playClickSound]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -378,10 +437,12 @@ export default function Home() {
       audio.play().then(() => startVisualizer()).catch(() => {
         setIsPlaying(false);
         setIsLoading(false);
+        setTimeout(() => stopRecording(), 0); // Cancela o rec se a rádio cair/falhar
       });
     } else {
       audio.pause();
       stopVisualizer();
+      // REMOVIDO: A linha que causava o erro do ESLint estava aqui!
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPlaying, currentRadio]); 
@@ -394,12 +455,13 @@ export default function Home() {
   }, []);
 
   const changeRadio = useCallback((index) => {
+    if (isRecording) stopRecording(); // Paramos a gravação de forma limpa ao trocar de rádio
     setIsPlaying(false);
     setIsLoading(true); 
     resetAudio();
     setActiveIndex(index);
     playClickSound(); 
-  }, [resetAudio, playClickSound]);
+  }, [resetAudio, playClickSound, isRecording, stopRecording]);
 
   useEffect(() => {
     if (audioRef.current && currentRadio) {
@@ -516,8 +578,9 @@ export default function Home() {
                         {currentTime}
                       </span>
                     </div>
-                    <span className={`${isPlaying && isLoading ? (backlight ? 'text-yellow-400' : 'text-yellow-700') : ''} text-xs font-mono font-bold animate-pulse`}>
-                      {isPlaying ? (isLoading ? 'TUNING...' : 'ON AIR') : 'STANDBY'}
+                    {/* FEEDBACK DE ESTADO NO LCD: ON AIR / STANDBY / RECORDING */}
+                    <span className={`${isRecording ? 'text-red-500' : isPlaying && isLoading ? (backlight ? 'text-yellow-400' : 'text-yellow-700') : ''} text-xs font-mono font-bold animate-pulse`}>
+                      {isRecording ? 'RECORDING' : isPlaying ? (isLoading ? 'TUNING...' : 'ON AIR') : 'STANDBY'}
                     </span>
                   </div>
                 </div>
@@ -539,13 +602,13 @@ export default function Home() {
                     <p>FREQ: {(88.0 + safeIndex * 2.4).toFixed(1)} MHz</p>
                     <p>BAND: {band} / RESOLUTION: HQ STREAM</p>
                     <p>COLOR: {activeTheme.name} / BACKLIGHT: {backlight ? 'ON' : 'OFF'}</p>
-                    <p>STATUS: {isLoading ? 'SYNCING...' : (isPlaying ? 'ACTIVE' : 'IDLE')}</p>
+                    <p>STATUS: {isRecording ? 'REC ACTIVE' : isLoading ? 'SYNCING...' : (isPlaying ? 'ACTIVE' : 'IDLE')}</p>
                   </div>
                 </div>
               </div>
 
-              {/* PAINEL DE BOTÕES - AGORA COM 8 BOTÕES (GRID PERFEITA 4x2) */}
-              <div className="grid grid-cols-4 md:flex md:flex-wrap justify-center gap-3 mt-8 px-2">
+              {/* PAINEL DE BOTÕES - AGORA COM 9 BOTÕES (GRID 3x3 no Mobile e Flex no Desktop) */}
+              <div className="grid grid-cols-3 md:flex md:flex-wrap justify-center gap-3 mt-8 px-2">
                 <button onClick={togglePlay} className="h-14 md:w-14 bg-zinc-700 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group">
                   {isPlaying ? <Square size={16} className={activeTheme.text} /> : <Play size={16} className="text-zinc-300 group-hover:text-white" />}
                   <span className="text-[8px] font-bold tracking-widest uppercase text-zinc-400">Pwr</span>
@@ -577,6 +640,12 @@ export default function Home() {
                 <button onClick={cycleTheme} className={`h-14 md:w-14 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group bg-zinc-800 hover:bg-zinc-700`}>
                   <Palette size={16} className={activeTheme.text} />
                   <span className={`text-[8px] font-bold tracking-widest uppercase ${activeTheme.text}`}>Cor</span>
+                </button>
+                
+                {/* NOVO BOTÃO DE GRAVAÇÃO (REC) */}
+                <button onClick={toggleRecord} className={`h-14 md:w-14 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border group ${isRecording ? 'bg-red-900/30 border-red-900' : 'bg-zinc-700 border-zinc-600'}`}>
+                  <Disc size={16} className={isRecording ? 'text-red-500 animate-pulse' : 'text-zinc-300 group-hover:text-white'} />
+                  <span className={`text-[8px] font-bold tracking-widest uppercase ${isRecording ? 'text-red-500' : 'text-zinc-400'}`}>Rec</span>
                 </button>
               </div>
 
@@ -646,10 +715,10 @@ export default function Home() {
                     </div>
                   </div>
                   <div className="flex gap-4 items-start">
-                    <div className="w-10 h-10 bg-zinc-800 rounded flex items-center justify-center shrink-0 border border-zinc-700"><Palette size={20} className={activeTheme.text}/></div>
+                    <div className="w-10 h-10 bg-zinc-800 rounded flex items-center justify-center shrink-0 border border-zinc-700"><Disc size={20} className={activeTheme.text}/></div>
                     <div>
-                      <h4 className="font-bold text-lg">Display Colorways</h4>
-                      <p className="text-zinc-400 text-sm">Altera a cor do LCD para combinar com o teu ambiente. Inclui temas inspirados em setups de hardware, distros Linux e desporto automóvel.</p>
+                      <h4 className="font-bold text-lg">Gravador (REC)</h4>
+                      <p className="text-zinc-400 text-sm">Clica para capturar o áudio da tua rádio preferida. Clica novamente para salvar e baixar automaticamente em formato .webm diretamente para a tua máquina.</p>
                     </div>
                   </div>
                 </div>
