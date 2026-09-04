@@ -2,7 +2,7 @@
 
 import Player from '@/components/Player';
 import { radioList } from '@/data/radios';
-import { ChevronDown, ChevronUp, Code2, Disc, Heart, Info, Lightbulb, MapPin, Palette, Play, Radio, RadioReceiver, Square, Timer, Volume2, VolumeX } from 'lucide-react';
+import { ChevronDown, ChevronUp, Code2, Disc, Heart, Info, Lightbulb, MapPin, Palette, Play, PlusCircle, Radio, RadioReceiver, Square, Timer, Volume2, VolumeX } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 const VERTICAL_SPACING = 180; 
@@ -94,6 +94,12 @@ export default function Home() {
   const [backlight, setBacklight] = useState(true);
   const [themeIndex, setThemeIndex] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
+
+  // ESTADOS PARA INJEÇÃO MANUAL DE RÁDIOS
+  const [customRadios, setCustomRadios] = useState([]);
+  const [newRadioName, setNewRadioName] = useState('');
+  const [newRadioUrl, setNewRadioUrl] = useState('');
+  const [newRadioGenre, setNewRadioGenre] = useState('');
   
   const audioRef = useRef(null);
   const canvasRef = useRef(null);
@@ -191,7 +197,6 @@ export default function Home() {
     }
   }, []);
 
-  // NOVO: Função isolada e segura para parar a gravação
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
@@ -217,7 +222,6 @@ export default function Home() {
           if (prev <= 1) {
             setIsPlaying(false);
             setSleepTimer(0);
-            // Executa fora do ciclo de renderização síncrono para evitar aviso do ESLint
             setTimeout(() => stopRecording(), 0); 
             return 0;
           }
@@ -268,10 +272,35 @@ export default function Home() {
     playSystemBeep(1000 + (themeIndex * 200), 'sine', 0.05); 
   }, [themeIndex, playSystemBeep]);
 
-  const displayRadios = radioList;
+  // COMBINAÇÃO DAS RÁDIOS PADRÃO + RÁDIOS CUSTOMIZADAS PELO UTILIZADOR
+  const displayRadios = [...radioList, ...customRadios];
   const currentRadio = displayRadios[activeIndex >= displayRadios.length ? 0 : activeIndex];
 
-  // SISTEMA DE GRAVAÇÃO (REC) - Agora focado apenas no seu dever
+  // ADICIONAR RÁDIO MANUALMENTE
+  const handleAddCustomRadio = (e) => {
+    e.preventDefault();
+    if (!newRadioName.trim() || !newRadioUrl.trim()) return;
+
+    const newRadio = {
+      id: Date.now(), // ID único baseado em timestamp
+      name: newRadioName.trim(),
+      genre: newRadioGenre.trim() || 'Custom Stream',
+      city: 'Local Injection',
+      url: newRadioUrl.trim(),
+      logo: null // Sem logo padrão
+    };
+
+    const updatedCustoms = [...customRadios, newRadio];
+    setCustomRadios(updatedCustoms);
+    localStorage.setItem('radioarch_custom', JSON.stringify(updatedCustoms));
+
+    // Limpar inputs e dar feedback tátil
+    setNewRadioName('');
+    setNewRadioUrl('');
+    setNewRadioGenre('');
+    playSystemBeep(1400, 'sine', 0.1);
+  };
+
   const toggleRecord = useCallback(() => {
     if (!isPlaying || !audioCtxRef.current) return;
 
@@ -317,11 +346,13 @@ export default function Home() {
       const savedVolume = localStorage.getItem('radioarch_volume');
       const savedFavs = localStorage.getItem('radioarch_favs');
       const savedTheme = localStorage.getItem('radioarch_theme');
+      const savedCustom = localStorage.getItem('radioarch_custom');
       
       if (savedIndex !== null) setActiveIndex(parseInt(savedIndex, 10));
       if (savedVolume !== null) setVolume(parseFloat(savedVolume));
       if (savedFavs) setFavorites(JSON.parse(savedFavs));
       if (savedTheme !== null) setThemeIndex(parseInt(savedTheme, 10));
+      if (savedCustom) setCustomRadios(JSON.parse(savedCustom));
     }, 0);
     return () => cancelAnimationFrame(requestRef.current);
   }, []);
@@ -405,10 +436,12 @@ export default function Home() {
   }, []);
 
   const togglePlay = useCallback(() => {
+    if (isPlaying && isRecording) {
+      stopRecording(); 
+    }
+    
     if (!isPlaying) {
       setIsLoading(true); 
-    } else {
-      if (isRecording) stopRecording(); // Paramos a gravação AQUI, antes do estado de play mudar
     }
     setIsPlaying((prev) => !prev);
     playClickSound(); 
@@ -437,12 +470,11 @@ export default function Home() {
       audio.play().then(() => startVisualizer()).catch(() => {
         setIsPlaying(false);
         setIsLoading(false);
-        setTimeout(() => stopRecording(), 0); // Cancela o rec se a rádio cair/falhar
+        setTimeout(() => stopRecording(), 0);
       });
     } else {
       audio.pause();
       stopVisualizer();
-      // REMOVIDO: A linha que causava o erro do ESLint estava aqui!
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPlaying, currentRadio]); 
@@ -455,7 +487,7 @@ export default function Home() {
   }, []);
 
   const changeRadio = useCallback((index) => {
-    if (isRecording) stopRecording(); // Paramos a gravação de forma limpa ao trocar de rádio
+    if (isRecording) stopRecording(); 
     setIsPlaying(false);
     setIsLoading(true); 
     resetAudio();
@@ -509,6 +541,7 @@ export default function Home() {
           <div className="hidden md:flex gap-8 text-sm font-medium text-zinc-400">
             <a href="#app" className={`hover:${activeTheme.text} transition-colors`}>Player</a>
             <a href="#stations" className={`hover:${activeTheme.text} transition-colors`}>Estações</a>
+            <a href="#inject" className={`hover:${activeTheme.text} transition-colors`}>Injeção Manual</a>
             <a href="#guide" className={`hover:${activeTheme.text} transition-colors`}>Guia</a>
             <a href="#developer" className={`hover:${activeTheme.text} transition-colors`}>Dev</a>
           </div>
@@ -578,7 +611,6 @@ export default function Home() {
                         {currentTime}
                       </span>
                     </div>
-                    {/* FEEDBACK DE ESTADO NO LCD: ON AIR / STANDBY / RECORDING */}
                     <span className={`${isRecording ? 'text-red-500' : isPlaying && isLoading ? (backlight ? 'text-yellow-400' : 'text-yellow-700') : ''} text-xs font-mono font-bold animate-pulse`}>
                       {isRecording ? 'RECORDING' : isPlaying ? (isLoading ? 'TUNING...' : 'ON AIR') : 'STANDBY'}
                     </span>
@@ -607,7 +639,7 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* PAINEL DE BOTÕES - AGORA COM 9 BOTÕES (GRID 3x3 no Mobile e Flex no Desktop) */}
+              {/* PAINEL DE BOTÕES (GRID 3x3) */}
               <div className="grid grid-cols-3 md:flex md:flex-wrap justify-center gap-3 mt-8 px-2">
                 <button onClick={togglePlay} className="h-14 md:w-14 bg-zinc-700 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group">
                   {isPlaying ? <Square size={16} className={activeTheme.text} /> : <Play size={16} className="text-zinc-300 group-hover:text-white" />}
@@ -641,8 +673,6 @@ export default function Home() {
                   <Palette size={16} className={activeTheme.text} />
                   <span className={`text-[8px] font-bold tracking-widest uppercase ${activeTheme.text}`}>Cor</span>
                 </button>
-                
-                {/* NOVO BOTÃO DE GRAVAÇÃO (REC) */}
                 <button onClick={toggleRecord} className={`h-14 md:w-14 rounded-lg shadow-[0_4px_0_#18181b] active:shadow-[0_0px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border group ${isRecording ? 'bg-red-900/30 border-red-900' : 'bg-zinc-700 border-zinc-600'}`}>
                   <Disc size={16} className={isRecording ? 'text-red-500 animate-pulse' : 'text-zinc-300 group-hover:text-white'} />
                   <span className={`text-[8px] font-bold tracking-widest uppercase ${isRecording ? 'text-red-500' : 'text-zinc-400'}`}>Rec</span>
@@ -667,6 +697,62 @@ export default function Home() {
         </FadeInSection>
       </section>
 
+      {/* SEÇÃO DE INJEÇÃO MANUAL DE RÁDIOS (NOVO RECURSO) */}
+      <section id="inject" className="py-24 bg-zinc-900/50 border-t border-zinc-800 px-6">
+        <div className="max-w-3xl mx-auto">
+          <FadeInSection>
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-black mb-4">Injeção Manual <span className={activeTheme.text}>de Frequência.</span></h2>
+              <p className="text-zinc-400">Adiciona a tua própria URL de streaming (.mp3, .ogg) diretamente para o teu Deck pessoal com persistência local.</p>
+            </div>
+            
+            <form onSubmit={handleAddCustomRadio} className="bg-zinc-950 border border-zinc-800 p-8 rounded-2xl shadow-xl flex flex-col gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-mono font-bold tracking-widest text-zinc-400">NOME DA ESTAÇÃO</label>
+                  <input 
+                    type="text" 
+                    placeholder="Ex: Minha Rádio Lo-Fi" 
+                    value={newRadioName}
+                    onChange={(e) => setNewRadioName(e.target.value)}
+                    required
+                    className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-white outline-none focus:border-cyan-500 font-mono text-sm transition-colors"
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-mono font-bold tracking-widest text-zinc-400">GÉNERO / ESTILO</label>
+                  <input 
+                    type="text" 
+                    placeholder="Ex: Chill / Ambient" 
+                    value={newRadioGenre}
+                    onChange={(e) => setNewRadioGenre(e.target.value)}
+                    className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-white outline-none focus:border-cyan-500 font-mono text-sm transition-colors"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-mono font-bold tracking-widest text-zinc-400">URL DE STREAMING (.MP3/.OGG)</label>
+                <input 
+                  type="url" 
+                  placeholder="https://exemplo.com/stream.mp3" 
+                  value={newRadioUrl}
+                  onChange={(e) => setNewRadioUrl(e.target.value)}
+                  required
+                  className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-white outline-none focus:border-cyan-500 font-mono text-sm transition-colors"
+                />
+              </div>
+              <button 
+                type="submit" 
+                className={`mt-2 flex items-center justify-center gap-2 font-bold px-6 py-4 rounded-xl transition-all border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 text-white shadow-lg`}
+              >
+                <PlusCircle size={18} className={activeTheme.text} />
+                <span>Inject Stream into Deck</span>
+              </button>
+            </form>
+          </FadeInSection>
+        </div>
+      </section>
+
       <section id="stations" className="py-24 bg-zinc-900 border-t border-zinc-800 px-6">
         <div className="max-w-7xl mx-auto">
           <FadeInSection>
@@ -680,9 +766,13 @@ export default function Home() {
             {displayRadios.slice(0, 4).map((r, i) => (
               <FadeInSection key={r.id} delay={i * 100}>
                 <div className="bg-zinc-950/50 p-6 rounded-2xl border border-zinc-800 flex flex-col items-center text-center hover:border-zinc-500/50 transition-colors group cursor-pointer" onClick={() => changeRadio(i)}>
-                  <div className="w-24 h-24 mb-4 drop-shadow-md group-hover:scale-110 transition-transform">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={r.logo} alt={r.name} className="w-full h-full object-contain" />
+                  <div className="w-24 h-24 mb-4 drop-shadow-md group-hover:scale-110 transition-transform flex items-center justify-center bg-zinc-900 rounded-xl">
+                    {r.logo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={r.logo} alt={r.name} className="w-full h-full object-contain" />
+                    ) : (
+                      <RadioReceiver size={40} className={activeTheme.text} />
+                    )}
                   </div>
                   <h3 className="font-bold text-white mb-1">{r.name}</h3>
                   <p className={`text-xs font-mono ${activeTheme.text}`}>[{r.genre}]</p>
@@ -704,21 +794,21 @@ export default function Home() {
                     <div className="w-10 h-10 bg-zinc-800 rounded flex items-center justify-center shrink-0 border border-zinc-700"><Timer size={20} className={activeTheme.text}/></div>
                     <div>
                       <h4 className="font-bold text-lg">Sleep Timer</h4>
-                      <p className="text-zinc-400 text-sm">Configura o rádio para desligar automaticamente após 15, 30 ou 60 minutos. Ideal para focares nos estudos ou dormir a ouvir Lo-Fi.</p>
+                      <p className="text-zinc-400 text-sm">Configura o rádio para desligar automaticamente após 15, 30 ou 60 minutos.</p>
                     </div>
                   </div>
                   <div className="flex gap-4 items-start">
                     <div className="w-10 h-10 bg-zinc-800 rounded flex items-center justify-center shrink-0 border border-zinc-700"><Radio size={20} className={activeTheme.text}/></div>
                     <div>
                       <h4 className="font-bold text-lg">AM / FM Toggle</h4>
-                      <p className="text-zinc-400 text-sm">Alterna o sinal. O modo FM (padrão) entrega alta fidelidade (24kHz). O modo AM aplica um filtro bandpass analógico e gera estática real no áudio.</p>
+                      <p className="text-zinc-400 text-sm">O modo FM entrega alta fidelidade. O modo AM aplica um filtro bandpass analógico e estática real.</p>
                     </div>
                   </div>
                   <div className="flex gap-4 items-start">
                     <div className="w-10 h-10 bg-zinc-800 rounded flex items-center justify-center shrink-0 border border-zinc-700"><Disc size={20} className={activeTheme.text}/></div>
                     <div>
                       <h4 className="font-bold text-lg">Gravador (REC)</h4>
-                      <p className="text-zinc-400 text-sm">Clica para capturar o áudio da tua rádio preferida. Clica novamente para salvar e baixar automaticamente em formato .webm diretamente para a tua máquina.</p>
+                      <p className="text-zinc-400 text-sm">Clica para capturar o áudio e baixar automaticamente em formato .webm para a tua máquina.</p>
                     </div>
                   </div>
                 </div>
@@ -749,8 +839,7 @@ export default function Home() {
             <p className="text-zinc-400 text-lg leading-relaxed mb-8">
               Estudante de Análise e Desenvolvimento de Sistemas com foco prático em engenharia Full Stack.
               O projeto <strong className="text-white">Radio Arch</strong> demonstra a capacidade de combinar manipulação avançada da DOM,
-              gestão de estado complexa em React, e arquitetura baseada em eventos via Web Audio API,
-              entregando uma UI tátil estilizada de forma imaculada com Tailwind CSS.
+              gestão de estado complexa em React, e arquitetura baseada em eventos via Web Audio API.
             </p>
             
             <div className="flex justify-center gap-4">
