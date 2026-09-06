@@ -1,11 +1,14 @@
 import { Pause, Play, Star, Volume2, VolumeX } from 'lucide-react';
+import Image from 'next/image';
 
 const RadioInfo = ({ radio, isPlaying, isFavorite, toggleFavorite }) => (
   <div className="flex items-center gap-4 w-1/3 min-w-0 font-mono">
-    {/* eslint-disable-next-line @next/next/no-img-element */}
-    <img 
-      src={radio.logo} 
+    <Image 
+      src={radio.logo || 'https://via.placeholder.com/150/000000/22d3ee?text=RADIO'} 
       alt={radio.name}
+      width={48}
+      height={48}
+      unoptimized
       className="w-12 h-12 border border-cyan-900 hidden sm:block object-contain bg-black p-1" 
     />
     <div className="truncate flex flex-col justify-center">
@@ -14,11 +17,12 @@ const RadioInfo = ({ radio, isPlaying, isFavorite, toggleFavorite }) => (
           {isPlaying ? '>>> ON_AIR' : '|| STANDBY'}
         </span>
         
+        {/* EQUALIZADOR REAL: Tailwind gap corrigido para gap-0.5 */}
         {isPlaying && (
-          <div className="flex items-end gap-0.5 h-3">
-            <div className="w-0.75 bg-cyan-400 animate-eq1"></div>
-            <div className="w-0.75 bg-cyan-400 animate-eq2"></div>
-            <div className="w-0.75 bg-cyan-400 animate-eq3"></div>
+          <div className="flex items-end gap-0.5 h-3 w-6 overflow-hidden">
+            <div id="eq-1" className="w-1.5 bg-cyan-400 h-1 transition-all duration-75"></div>
+            <div id="eq-2" className="w-1.5 bg-cyan-400 h-1 transition-all duration-75"></div>
+            <div id="eq-3" className="w-1.5 bg-cyan-400 h-1 transition-all duration-75"></div>
           </div>
         )}
       </div>
