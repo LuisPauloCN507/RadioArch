@@ -2,7 +2,7 @@
 
 import Player from '@/components/Player';
 import { radioList } from '@/data/radios';
-import { ChevronDown, ChevronUp, Code2, Disc, Heart, Info, Lightbulb, MapPin, Palette, Play, PlusCircle, Radio, RadioReceiver, Search, Square, Timer, Upload, Download, Volume2, VolumeX } from 'lucide-react';
+import { ChevronDown, ChevronUp, Code2, Command, Disc, Heart, Info, Lightbulb, MapPin, Palette, Play, PlusCircle, Radio, RadioReceiver, Search, Square, Timer, Upload, Download, Volume2, VolumeX, X } from 'lucide-react';
 import Image from 'next/image';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -75,10 +75,11 @@ export default function Home() {
   const [backlight, setBacklight] = useState(true);
   const [themeIndex, setThemeIndex] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
+  const [showCommandCenter, setShowCommandCenter] = useState(false);
 
   const [customRadios, setCustomRadios] = useState([]);
   const [newRadioName, setNewRadioName] = useState('');
-  const [newRadioGenre, setNewRadioGenre] = useState(''); // Estado adicionado para corrigir o erro
+  const [newRadioGenre, setNewRadioGenre] = useState(''); 
   const [newRadioUrl, setNewRadioUrl] = useState('');
   
   const [apiSearchQuery, setApiSearchQuery] = useState('');
@@ -219,14 +220,7 @@ export default function Home() {
   const handleAddCustomRadio = (e) => {
     e.preventDefault();
     if (!newRadioName.trim() || !newRadioUrl.trim()) return;
-    const newRadio = { 
-      id: Date.now(), 
-      name: newRadioName.trim(), 
-      genre: newRadioGenre.trim() || 'Custom Stream', 
-      city: 'Local Injection', 
-      url: newRadioUrl.trim(), 
-      logo: null 
-    };
+    const newRadio = { id: Date.now(), name: newRadioName.trim(), genre: newRadioGenre.trim() || 'Custom Stream', city: 'Local Injection', url: newRadioUrl.trim(), logo: null };
     const updatedCustoms = [...customRadios, newRadio];
     setCustomRadios(updatedCustoms); localStorage.setItem('radioarch_custom', JSON.stringify(updatedCustoms));
     setNewRadioName(''); setNewRadioGenre(''); setNewRadioUrl(''); playSystemBeep(1400, 'sine', 0.1);
@@ -327,6 +321,17 @@ export default function Home() {
         eq2.style.height = `${Math.max(2, (dataArray[6] / 255) * 12)}px`;
         eq3.style.height = `${Math.max(2, (dataArray[10] / 255) * 12)}px`;
       }
+
+      // NOVO: AMBILIGHT ENGINE (Batida Sincronizada)
+      const ambilight = document.getElementById('ambilight-glow');
+      if (ambilight && backlight) {
+        // Média dos graves (Bass - Bins 0 a 3)
+        const bass = (dataArray[0] + dataArray[1] + dataArray[2] + dataArray[3]) / 4;
+        const scale = 1 + (bass / 255) * 0.3; // Aumenta até 30% na batida
+        const opacity = 0.15 + (bass / 255) * 0.25; 
+        ambilight.style.transform = `translate(-50%, -50%) scale(${scale})`;
+        ambilight.style.opacity = opacity;
+      }
     };
     cancelAnimationFrame(requestRef.current); draw();
   }, [backlight]);
@@ -338,6 +343,11 @@ export default function Home() {
       const barCount = 20; const barWidth = (canvasRef.current.width / barCount) - 2;
       ctx.fillStyle = '#18181b'; ctx.shadowBlur = 0;
       for(let i = 0; i < barCount; i++) { ctx.fillRect(i * (barWidth + 2), canvasRef.current.height - 2, barWidth, 2); }
+    }
+    const ambilight = document.getElementById('ambilight-glow');
+    if (ambilight) {
+      ambilight.style.transform = `translate(-50%, -50%) scale(1)`;
+      ambilight.style.opacity = 0.2;
     }
   }, []);
 
@@ -387,16 +397,27 @@ export default function Home() {
     }
   }, [currentRadio, isPlaying, togglePlay, changeRadio, previousIndex, nextIndex]);
 
+  // NOVO: ATALHOS GLOBAIS COM TECLADO
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if(e.target.tagName === 'INPUT') return;
+      if(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      
+      const key = e.key.toLowerCase();
+      
       if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
       if (e.code === 'ArrowRight') { e.preventDefault(); changeRadio(nextIndex); }
       if (e.code === 'ArrowLeft') { e.preventDefault(); changeRadio(previousIndex); }
+      
+      if (key === 'm') { e.preventDefault(); toggleMute(); }
+      if (key === 'l') { e.preventDefault(); toggleBacklight(); }
+      if (key === 'b') { e.preventDefault(); toggleBand(); }
+      if (key === 'c') { e.preventDefault(); cycleTheme(); }
+      if (key === 'r') { e.preventDefault(); toggleRecord(); }
+      if (key === 'k') { e.preventDefault(); setShowCommandCenter(prev => !prev); playSystemBeep(1200, 'sine', 0.1); }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [nextIndex, previousIndex, changeRadio, togglePlay]); 
+  }, [nextIndex, previousIndex, changeRadio, togglePlay, toggleMute, toggleBacklight, toggleBand, cycleTheme, toggleRecord, playSystemBeep]); 
 
   useEffect(() => { if (!isPlaying) stopVisualizer(); }, [isPlaying, stopVisualizer]);
 
@@ -411,12 +432,17 @@ export default function Home() {
             <a href="#stations" className={`hover:${activeTheme.text} transition-colors`}>Estações</a>
             <a href="#inject" className={`hover:${activeTheme.text} transition-colors`}>Scanner & Injeção</a>
           </div>
-          <button onClick={() => { document.getElementById('app').scrollIntoView({ behavior: 'smooth' }); }} className="bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2 rounded-md font-bold text-sm border border-zinc-700">Sintonizar</button>
+          <div className="flex items-center gap-4">
+             <button onClick={() => setShowCommandCenter(true)} className="hidden sm:flex items-center gap-2 text-xs font-mono text-zinc-500 hover:text-white transition-colors border border-zinc-800 px-3 py-1.5 rounded bg-zinc-900">
+               <Command size={14}/> <span>Acessibilidade [ K ]</span>
+             </button>
+             <button onClick={() => { document.getElementById('app').scrollIntoView({ behavior: 'smooth' }); }} className="bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2 rounded-md font-bold text-sm border border-zinc-700">Sintonizar</button>
+          </div>
         </div>
       </nav>
 
       <section id="app" className="pt-32 pb-24 px-4 md:px-8 flex flex-col items-center justify-center min-h-screen relative">
-        <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-200 h-150 rounded-full pointer-events-none blur-[150px] transition-colors duration-1000 ${activeTheme.bg} opacity-20`}></div>
+        <div id="ambilight-glow" className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-200 h-150 rounded-full pointer-events-none blur-[150px] transition-colors duration-1000 ${activeTheme.bg} opacity-20`} style={{ transition: 'background-color 1s ease, transform 0.1s ease-out, opacity 0.1s ease-out' }}></div>
         <FadeInSection>
           <div className="text-center mb-12 relative z-10">
             <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-transparent bg-clip-text bg-linear-to-br from-white via-zinc-200 to-zinc-500 mb-6">A Frequência Perfeita <br className="hidden md:block" /> para o Teu Flow.</h1>
@@ -569,6 +595,32 @@ export default function Home() {
           </div>
         </FadeInSection>
       </section>
+
+      {/* OVERLAY: COMMAND CENTER (ATALHOS) */}
+      {showCommandCenter && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-lg shadow-[0_0_50px_rgba(0,0,0,1)] flex flex-col overflow-hidden">
+            <div className="flex justify-between items-center p-6 border-b border-zinc-900">
+              <h3 className="font-bold text-xl flex items-center gap-2"><Command className={activeTheme.text} /> Command Center</h3>
+              <button onClick={() => setShowCommandCenter(false)} className="text-zinc-500 hover:text-white transition-colors"><X size={24} /></button>
+            </div>
+            <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8 font-mono text-sm">
+              <div className="flex justify-between border-b border-zinc-900 pb-2"><span className="text-zinc-400">Play / Pause</span><kbd className="bg-zinc-800 px-2 rounded text-cyan-400">Space</kbd></div>
+              <div className="flex justify-between border-b border-zinc-900 pb-2"><span className="text-zinc-400">Próxima Rádio</span><kbd className="bg-zinc-800 px-2 rounded text-cyan-400">→</kbd></div>
+              <div className="flex justify-between border-b border-zinc-900 pb-2"><span className="text-zinc-400">Rádio Anterior</span><kbd className="bg-zinc-800 px-2 rounded text-cyan-400">←</kbd></div>
+              <div className="flex justify-between border-b border-zinc-900 pb-2"><span className="text-zinc-400">Mute Audio</span><kbd className="bg-zinc-800 px-2 rounded text-cyan-400">M</kbd></div>
+              <div className="flex justify-between border-b border-zinc-900 pb-2"><span className="text-zinc-400">Trocar Cor (Tema)</span><kbd className="bg-zinc-800 px-2 rounded text-cyan-400">C</kbd></div>
+              <div className="flex justify-between border-b border-zinc-900 pb-2"><span className="text-zinc-400">Banda (AM/FM)</span><kbd className="bg-zinc-800 px-2 rounded text-cyan-400">B</kbd></div>
+              <div className="flex justify-between border-b border-zinc-900 pb-2"><span className="text-zinc-400">Backlight On/Off</span><kbd className="bg-zinc-800 px-2 rounded text-cyan-400">L</kbd></div>
+              <div className="flex justify-between border-b border-zinc-900 pb-2"><span className="text-zinc-400">Gravar (REC)</span><kbd className="bg-zinc-800 px-2 rounded text-red-400">R</kbd></div>
+              <div className="flex justify-between border-b border-zinc-900 pb-2"><span className="text-zinc-400">Abrir Atalhos</span><kbd className="bg-zinc-800 px-2 rounded text-cyan-400">K</kbd></div>
+            </div>
+            <div className="p-4 bg-zinc-900/50 text-center text-xs text-zinc-500 font-mono">
+              Nota: Os atalhos são desativados enquanto digitas nos formulários.
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="hidden">
         <Player currentRadio={currentRadio} isPlaying={isPlaying} onPlayPause={() => setIsPlaying(!isPlaying)} volume={volume} onVolumeChange={setVolume} isFavorite={favorites.includes(currentRadio?.id)} toggleFavorite={handleToggleFavorite} />
