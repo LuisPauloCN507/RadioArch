@@ -2,7 +2,7 @@
 
 import Player from '@/components/Player';
 import { radioList } from '@/data/radios';
-import { ChevronDown, ChevronUp, Code2, Command, Disc, Heart, Info, Lightbulb, MapPin, Palette, Play, PlusCircle, Radio, RadioReceiver, Search, Square, Timer, Upload, Download, Volume2, VolumeX, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Code2, Command, Copy, Disc, Heart, Info, Lightbulb, MapPin, Palette, Play, PlusCircle, Radio, RadioReceiver, Search, Square, Timer, Trash2, Upload, Download, Volume2, VolumeX, X } from 'lucide-react';
 import Image from 'next/image';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -192,6 +192,15 @@ export default function Home() {
   const previousIndex = (safeIndex - 1 + radioCount) % radioCount;
   const nextIndex = (safeIndex + 1) % radioCount;
 
+  // COMMIT 1: Título dinâmico da aba do navegador
+  useEffect(() => {
+    if (isPlaying && currentRadio) {
+      document.title = `▶ ${currentRadio.name} | RadioArch`;
+    } else {
+      document.title = 'RadioArch - Standby';
+    }
+  }, [isPlaying, currentRadio]);
+
   const handleExportBackup = () => {
     const data = { customRadios, favorites, themeIndex, volume };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -224,6 +233,24 @@ export default function Home() {
     const updatedCustoms = [...customRadios, newRadio];
     setCustomRadios(updatedCustoms); localStorage.setItem('radioarch_custom', JSON.stringify(updatedCustoms));
     setNewRadioName(''); setNewRadioGenre(''); setNewRadioUrl(''); playSystemBeep(1400, 'sine', 0.1);
+  };
+
+  // COMMIT 3: Função para limpar as rádios manuais (Wipe Deck)
+  const handleClearCustomRadios = () => {
+    if (confirm('Tem a certeza que deseja limpar todas as rádios customizadas?')) {
+      setCustomRadios([]);
+      localStorage.removeItem('radioarch_custom');
+      playSystemBeep(400, 'square', 0.2);
+    }
+  };
+
+  // COMMIT 2: Função para copiar a URL
+  const handleCopyUrl = () => {
+    if (currentRadio?.url) {
+      navigator.clipboard.writeText(currentRadio.url);
+      playSystemBeep(1600, 'sine', 0.1);
+      alert('URL copiada para a tua área de transferência!');
+    }
   };
 
   const searchGlobalApi = async (e) => {
@@ -322,12 +349,10 @@ export default function Home() {
         eq3.style.height = `${Math.max(2, (dataArray[10] / 255) * 12)}px`;
       }
 
-      // NOVO: AMBILIGHT ENGINE (Batida Sincronizada)
       const ambilight = document.getElementById('ambilight-glow');
       if (ambilight && backlight) {
-        // Média dos graves (Bass - Bins 0 a 3)
         const bass = (dataArray[0] + dataArray[1] + dataArray[2] + dataArray[3]) / 4;
-        const scale = 1 + (bass / 255) * 0.3; // Aumenta até 30% na batida
+        const scale = 1 + (bass / 255) * 0.3; 
         const opacity = 0.15 + (bass / 255) * 0.25; 
         ambilight.style.transform = `translate(-50%, -50%) scale(${scale})`;
         ambilight.style.opacity = opacity;
@@ -397,7 +422,6 @@ export default function Home() {
     }
   }, [currentRadio, isPlaying, togglePlay, changeRadio, previousIndex, nextIndex]);
 
-  // NOVO: ATALHOS GLOBAIS COM TECLADO
   useEffect(() => {
     const handleKeyDown = (e) => {
       if(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
@@ -477,7 +501,15 @@ export default function Home() {
                 <div className="flex-1 flex flex-col justify-center items-center mt-2 relative z-10">
                   <canvas ref={canvasRef} width={280} height={50} className={displayMode ? 'hidden' : 'mb-4'} />
                   <div className={displayMode ? 'hidden' : 'flex flex-col items-center transition-colors'} style={{ color: lcdColor }}><h2 className={`text-2xl font-bold tracking-wider text-center line-clamp-1 ${backlight ? 'text-white' : 'text-zinc-500'}`}>{currentRadio?.name}</h2><p className="text-xs mt-2 font-medium tracking-[0.3em] uppercase font-mono">[{currentRadio?.genre}]</p></div>
-                  <div className={`w-full flex flex-col gap-1.5 font-mono text-[10px] opacity-90 transition-colors ${displayMode ? 'block' : 'hidden'}`} style={{ color: lcdColor }}><p className={`border-b pb-1 mb-1 font-bold ${backlight ? 'border-current text-white' : 'border-zinc-800 text-zinc-400'}`}>SYSTEM DIAGNOSTICS</p><p>FREQ: {(88.0 + safeIndex * 2.4).toFixed(1)} MHz</p><p>BAND: {band} / RESOLUTION: HQ STREAM</p><p>COLOR: {activeTheme.name} / BACKLIGHT: {backlight ? 'ON' : 'OFF'}</p><p>STATUS: {isRecording ? 'REC ACTIVE' : isLoading ? 'SYNCING...' : (isPlaying ? 'ACTIVE' : 'IDLE')}</p></div>
+                  <div className={`w-full flex flex-col gap-1.5 font-mono text-[10px] opacity-90 transition-colors ${displayMode ? 'block' : 'hidden'}`} style={{ color: lcdColor }}>
+                    <p className={`border-b pb-1 mb-1 font-bold ${backlight ? 'border-current text-white' : 'border-zinc-800 text-zinc-400'}`}>SYSTEM DIAGNOSTICS</p>
+                    <p>FREQ: {(88.0 + safeIndex * 2.4).toFixed(1)} MHz</p>
+                    <p>COLOR: {activeTheme.name} / BACKLIGHT: {backlight ? 'ON' : 'OFF'}</p>
+                    <p className="flex items-center justify-between">
+                      <span>STATUS: {isRecording ? 'REC ACTIVE' : isLoading ? 'SYNCING...' : (isPlaying ? 'ACTIVE' : 'IDLE')}</span>
+                      <button onClick={handleCopyUrl} className="ml-2 bg-zinc-800 text-zinc-300 px-1.5 py-0.5 rounded hover:text-white flex items-center gap-1 border border-zinc-700 transition-colors"><Copy size={10}/> URL</button>
+                    </p>
+                  </div>
                 </div>
               </div>
               <div className="grid grid-cols-3 md:flex md:flex-wrap justify-center gap-3 mt-8 px-2">
@@ -513,7 +545,12 @@ export default function Home() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <form onSubmit={handleAddCustomRadio} className="bg-zinc-950 border border-zinc-800 p-8 rounded-2xl shadow-xl flex flex-col gap-6 h-full justify-between">
                 <div>
-                  <h3 className="font-bold text-xl mb-4 flex items-center gap-2 border-b border-zinc-800 pb-2"><PlusCircle className={activeTheme.text}/> Injeção Manual</h3>
+                  <h3 className="font-bold text-xl mb-4 flex justify-between items-center border-b border-zinc-800 pb-2">
+                    <span className="flex items-center gap-2"><PlusCircle className={activeTheme.text}/> Injeção Manual</span>
+                    {customRadios.length > 0 && (
+                      <button type="button" onClick={handleClearCustomRadios} className="text-xs text-red-500 hover:text-red-400 flex items-center gap-1 transition-colors bg-zinc-900 px-2 py-1 rounded border border-red-900"><Trash2 size={12}/> Limpar Deck</button>
+                    )}
+                  </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                     <div className="flex flex-col gap-2"><label className="text-[10px] font-mono text-zinc-500">NOME</label><input type="text" placeholder="Ex: Rádio Local" value={newRadioName} onChange={(e) => setNewRadioName(e.target.value)} required className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-white outline-none focus:border-cyan-500 font-mono text-sm" /></div>
                     <div className="flex flex-col gap-2"><label className="text-[10px] font-mono text-zinc-500">GÉNERO</label><input type="text" placeholder="Ex: Rock" value={newRadioGenre} onChange={(e) => setNewRadioGenre(e.target.value)} className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-white outline-none focus:border-cyan-500 font-mono text-sm" /></div>
@@ -596,9 +633,8 @@ export default function Home() {
         </FadeInSection>
       </section>
 
-      {/* OVERLAY: COMMAND CENTER (ATALHOS) */}
       {showCommandCenter && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-100 flex items-center justify-center p-4">
           <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-lg shadow-[0_0_50px_rgba(0,0,0,1)] flex flex-col overflow-hidden">
             <div className="flex justify-between items-center p-6 border-b border-zinc-900">
               <h3 className="font-bold text-xl flex items-center gap-2"><Command className={activeTheme.text} /> Command Center</h3>
