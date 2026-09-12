@@ -192,7 +192,6 @@ export default function Home() {
   const previousIndex = (safeIndex - 1 + radioCount) % radioCount;
   const nextIndex = (safeIndex + 1) % radioCount;
 
-  // COMMIT 1: Título dinâmico da aba do navegador
   useEffect(() => {
     if (isPlaying && currentRadio) {
       document.title = `▶ ${currentRadio.name} | RadioArch`;
@@ -235,7 +234,6 @@ export default function Home() {
     setNewRadioName(''); setNewRadioGenre(''); setNewRadioUrl(''); playSystemBeep(1400, 'sine', 0.1);
   };
 
-  // COMMIT 3: Função para limpar as rádios manuais (Wipe Deck)
   const handleClearCustomRadios = () => {
     if (confirm('Tem a certeza que deseja limpar todas as rádios customizadas?')) {
       setCustomRadios([]);
@@ -244,7 +242,6 @@ export default function Home() {
     }
   };
 
-  // COMMIT 2: Função para copiar a URL
   const handleCopyUrl = () => {
     if (currentRadio?.url) {
       navigator.clipboard.writeText(currentRadio.url);
@@ -446,8 +443,21 @@ export default function Home() {
   useEffect(() => { if (!isPlaying) stopVisualizer(); }, [isPlaying, stopVisualizer]);
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white font-sans selection:bg-cyan-500 selection:text-black overflow-x-hidden">
+    <div className="min-h-screen bg-zinc-950 text-white font-sans selection:bg-cyan-500 selection:text-black overflow-x-hidden relative">
+      
+      {/* COMMIT 2: SCROLLBAR DINÂMICO BASEADO NO TEMA */}
+      <style dangerouslySetInnerHTML={{__html: `
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #09090b; }
+        ::-webkit-scrollbar-thumb { background-color: ${activeTheme.hex}; border-radius: 10px; opacity: 0.8; }
+        ::-webkit-scrollbar-corner { background: #09090b; }
+      `}} />
+
+      {/* COMMIT 1: EFEITO CRT SCANLINES E TEXTURA GLOBAL */}
+      <div className="pointer-events-none fixed inset-0 z-100 bg-[linear-gradient(transparent_50%,rgba(0,0,0,0.15)_50%)] bg-size-[100%_4px] opacity-40 mix-blend-overlay"></div>
+
       <audio ref={audioRef} crossOrigin="anonymous" onWaiting={() => setIsLoading(true)} onLoadStart={() => setIsLoading(true)} onPlaying={() => setIsLoading(false)} onCanPlay={() => setIsLoading(false)} onError={() => setIsLoading(true)} />
+      
       <nav className="fixed top-0 w-full z-50 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-900/50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2"><RadioReceiver className={activeTheme.text} size={24} /><span className="font-mono font-bold tracking-widest uppercase text-lg">RADIO<span className="text-zinc-500">ARCH</span></span></div>
