@@ -53,7 +53,7 @@ export const radioList = [
     genre: "Synthwave",
     city: "Global - Online",
     url: "https://listen.nightride.fm/nightride.ogg",
-    logo: "/logos/synthwave.png",
+    logo: "/logos/nightrideFM.png",
   },
   {
     id: 8,
@@ -61,7 +61,7 @@ export const radioList = [
     genre: "Hacker / Ambient",
     city: "San Francisco - USA",
     url: "https://ice1.somafm.com/defcon-128-mp3",
-    logo: "/logos/defcon.png",
+    logo: "/logos/Def Con.png",
   },
   {
     id: 9,
@@ -77,7 +77,7 @@ export const radioList = [
     genre: "Chiptune / 8-bit",
     city: "Global - Online",
     url: "https://radio.nolife-radio.com/nolife-radio.mp3",
-    logo: "/logos/8bit.png",
+    logo: "/logos/No life.png",
   },
   {
     id: 11,
@@ -85,6 +85,6 @@ export const radioList = [
     genre: "Ambient / Space",
     city: "Berlim - Alemanha",
     url: "https://streams.fluxfm.de/ambient/mp3-320/streams.fluxfm.de/",
-    logo: "/logos/ambient.png",
+    logo: "/logos/FluxFM.png",
   }
 ];
