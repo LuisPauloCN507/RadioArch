@@ -2,7 +2,7 @@
 
 import Player from '@/components/Player';
 import { radioList } from '@/data/radios';
-import { ChevronDown, ChevronUp, Code2, Command, Copy, Disc, Heart, Info, Lightbulb, MapPin, Palette, Play, PlusCircle, Radio, RadioReceiver, Search, Square, Timer, Trash2, Upload, Download, Volume2, VolumeX, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Command, Copy, Disc, Download, Heart, Info, Lightbulb, MapPin, Palette, Play, PlusCircle, Radio, RadioReceiver, Search, Square, Terminal, Timer, Trash2, Upload, Volume2, VolumeX, X } from 'lucide-react';
 import Image from 'next/image';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -76,6 +76,9 @@ export default function Home() {
   const [themeIndex, setThemeIndex] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
   const [showCommandCenter, setShowCommandCenter] = useState(false);
+  
+  // NOVO: Estado para a notificação (Cyber-Toast)
+  const [toast, setToast] = useState(null);
 
   const [customRadios, setCustomRadios] = useState([]);
   const [newRadioName, setNewRadioName] = useState('');
@@ -94,6 +97,7 @@ export default function Home() {
   const requestRef = useRef(null);
   const noiseNodeRef = useRef(null); 
   const fileInputRef = useRef(null);
+  const toastTimerRef = useRef(null);
   
   const amFilterRef = useRef(null);
   const mediaRecorderRef = useRef(null);
@@ -105,6 +109,13 @@ export default function Home() {
   const lcdColorRef = useRef(lcdColor);
 
   useEffect(() => { lcdColorRef.current = lcdColor; }, [lcdColor]);
+
+  // NOVO: Função para invocar o Toast Notification
+  const showToast = useCallback((msg) => {
+    setToast(msg);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setToast(null), 3000);
+  }, []);
 
   const playClickSound = useCallback(() => {
     try {
@@ -219,8 +230,10 @@ export default function Home() {
         if (data.favorites) { setFavorites(data.favorites); localStorage.setItem('radioarch_favs', JSON.stringify(data.favorites)); }
         if (data.themeIndex !== undefined) { setThemeIndex(data.themeIndex); localStorage.setItem('radioarch_theme', data.themeIndex); }
         playSystemBeep(1000, 'square', 0.3);
-        alert('System Dump restaurado com sucesso!');
-      } catch(err) { alert('Ficheiro corrompido ou inválido.'); }
+        showToast('System Dump restaurado com sucesso!'); // Alterado de alert para showToast
+      } catch(err) { 
+        showToast('Erro: Ficheiro corrompido ou inválido.'); // Alterado de alert para showToast
+      }
     };
     reader.readAsText(file);
   };
@@ -246,7 +259,7 @@ export default function Home() {
     if (currentRadio?.url) {
       navigator.clipboard.writeText(currentRadio.url);
       playSystemBeep(1600, 'sine', 0.1);
-      alert('URL copiada para a tua área de transferência!');
+      showToast('URL copiada para a tua área de transferência!'); // Alterado de alert para showToast
     }
   };
 
@@ -329,6 +342,11 @@ export default function Home() {
 
     const draw = () => {
       requestRef.current = requestAnimationFrame(draw);
+      
+      // COMMIT 1: ECO-MODE!
+      // Se a aba estiver escondida (escondida noutro monitor ou aba), não desenhamos nada. Poupamos imensa RAM e CPU!
+      if (document.hidden) return;
+
       analyserRef.current.getByteFrequencyData(dataArray);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       const barCount = 20; const barWidth = (canvas.width / barCount) - 2; let x = 0;
@@ -445,7 +463,6 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-zinc-950 text-white font-sans selection:bg-cyan-500 selection:text-black overflow-x-hidden relative">
       
-      {/* COMMIT 2: SCROLLBAR DINÂMICO BASEADO NO TEMA */}
       <style dangerouslySetInnerHTML={{__html: `
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #09090b; }
@@ -453,7 +470,6 @@ export default function Home() {
         ::-webkit-scrollbar-corner { background: #09090b; }
       `}} />
 
-      {/* COMMIT 1: EFEITO CRT SCANLINES E TEXTURA GLOBAL */}
       <div className="pointer-events-none fixed inset-0 z-100 bg-[linear-gradient(transparent_50%,rgba(0,0,0,0.15)_50%)] bg-size-[100%_4px] opacity-40 mix-blend-overlay"></div>
 
       <audio ref={audioRef} crossOrigin="anonymous" onWaiting={() => setIsLoading(true)} onLoadStart={() => setIsLoading(true)} onPlaying={() => setIsLoading(false)} onCanPlay={() => setIsLoading(false)} onError={() => setIsLoading(true)} />
@@ -665,6 +681,14 @@ export default function Home() {
               Nota: Os atalhos são desativados enquanto digitas nos formulários.
             </div>
           </div>
+        </div>
+      )}
+
+      {/* COMMIT 2: CYBER-TOAST NOTIFICATION (Substitui os alerts nativos chatos) */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-100 bg-zinc-950 border border-zinc-800 text-white px-4 py-3 rounded-lg shadow-[0_0_30px_rgba(0,0,0,0.8)] font-mono text-sm flex items-center gap-3 transition-all animate-in slide-in-from-bottom-5 fade-in duration-300">
+          <Terminal size={16} className={activeTheme.text} />
+          {toast}
         </div>
       )}
 
