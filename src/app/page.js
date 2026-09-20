@@ -77,7 +77,6 @@ export default function Home() {
   const [isRecording, setIsRecording] = useState(false);
   const [showCommandCenter, setShowCommandCenter] = useState(false);
   
-  // NOVO: Estado para a notificação (Cyber-Toast)
   const [toast, setToast] = useState(null);
 
   const [customRadios, setCustomRadios] = useState([]);
@@ -110,7 +109,6 @@ export default function Home() {
 
   useEffect(() => { lcdColorRef.current = lcdColor; }, [lcdColor]);
 
-  // NOVO: Função para invocar o Toast Notification
   const showToast = useCallback((msg) => {
     setToast(msg);
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
@@ -230,9 +228,9 @@ export default function Home() {
         if (data.favorites) { setFavorites(data.favorites); localStorage.setItem('radioarch_favs', JSON.stringify(data.favorites)); }
         if (data.themeIndex !== undefined) { setThemeIndex(data.themeIndex); localStorage.setItem('radioarch_theme', data.themeIndex); }
         playSystemBeep(1000, 'square', 0.3);
-        showToast('System Dump restaurado com sucesso!'); // Alterado de alert para showToast
+        showToast('System Dump restaurado com sucesso!'); 
       } catch(err) { 
-        showToast('Erro: Ficheiro corrompido ou inválido.'); // Alterado de alert para showToast
+        showToast('Erro: Ficheiro corrompido ou inválido.'); 
       }
     };
     reader.readAsText(file);
@@ -259,7 +257,7 @@ export default function Home() {
     if (currentRadio?.url) {
       navigator.clipboard.writeText(currentRadio.url);
       playSystemBeep(1600, 'sine', 0.1);
-      showToast('URL copiada para a tua área de transferência!'); // Alterado de alert para showToast
+      showToast('URL copiada para a tua área de transferência!'); 
     }
   };
 
@@ -343,8 +341,6 @@ export default function Home() {
     const draw = () => {
       requestRef.current = requestAnimationFrame(draw);
       
-      // COMMIT 1: ECO-MODE!
-      // Se a aba estiver escondida (escondida noutro monitor ou aba), não desenhamos nada. Poupamos imensa RAM e CPU!
       if (document.hidden) return;
 
       analyserRef.current.getByteFrequencyData(dataArray);
@@ -397,32 +393,68 @@ export default function Home() {
     setIsPlaying((prev) => !prev); playClickSound(); 
   }, [isPlaying, isRecording, stopRecording, playClickSound]);
 
-  const resetAudio = useCallback(() => { if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = ''; } }, []);
-  const changeRadio = useCallback((index) => { if (isRecording) stopRecording(); setIsPlaying(false); setIsLoading(true); resetAudio(); setActiveIndex(index); playClickSound(); }, [resetAudio, playClickSound, isRecording, stopRecording]);
+  // CORREÇÃO DOS BUGS: Refatoração da lógica de play/pause e carregamento da stream
+  const changeRadio = useCallback((index) => { 
+    if (isRecording) stopRecording(); 
+    // Removemos o setIsPlaying(false) daqui, para manter a música a tocar sem interrupções se já estivesse on air!
+    setIsLoading(true); 
+    setActiveIndex(index); 
+    playClickSound(); 
+  }, [isRecording, stopRecording, playClickSound]);
 
+  // Efeito 1: Lida APENAS com a mudança de estação de rádio (mudança de link)
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (audio && currentRadio) {
+      audio.src = currentRadio.url;
+      audio.load();
+      
+      // Se o rádio já estava a tocar, tenta tocar a nova estação automaticamente.
+      if (isPlaying) {
+        audio.play().then(() => startVisualizer()).catch(() => setIsPlaying(false));
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentRadio]);
+
+  // Efeito 2: Lida APENAS com o botão Play/Pause (estado)
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !currentRadio) return;
 
     if (isPlaying) {
+      // Iniciação do Contexto de Áudio
       if (!audioCtxRef.current) {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
-        audioCtxRef.current = new AudioContext(); analyserRef.current = audioCtxRef.current.createAnalyser(); analyserRef.current.fftSize = 64; 
+        audioCtxRef.current = new AudioContext(); 
+        analyserRef.current = audioCtxRef.current.createAnalyser(); 
+        analyserRef.current.fftSize = 64; 
         amFilterRef.current = audioCtxRef.current.createBiquadFilter();
         sourceRef.current = audioCtxRef.current.createMediaElementSource(audio);
-        sourceRef.current.connect(amFilterRef.current); amFilterRef.current.connect(analyserRef.current); analyserRef.current.connect(audioCtxRef.current.destination);
+        sourceRef.current.connect(amFilterRef.current); 
+        amFilterRef.current.connect(analyserRef.current); 
+        analyserRef.current.connect(audioCtxRef.current.destination);
       }
       if (audioCtxRef.current.state === 'suspended') audioCtxRef.current.resume();
-      audio.play().then(() => startVisualizer()).catch(() => { setIsPlaying(false); setIsLoading(false); setTimeout(() => stopRecording(), 0); });
+      
+      // Só dispara um play() novo se o áudio estiver realmente pausado.
+      if (audio.paused) {
+        audio.play()
+          .then(() => startVisualizer())
+          .catch(() => { 
+            setIsPlaying(false); 
+            setIsLoading(false); 
+            setTimeout(() => stopRecording(), 0); 
+          });
+      } else {
+        startVisualizer();
+      }
     } else {
-      audio.pause(); stopVisualizer();
+      audio.pause(); 
+      stopVisualizer();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPlaying, currentRadio]); 
-
-  useEffect(() => {
-    if (audioRef.current && currentRadio) { audioRef.current.src = currentRadio.url; audioRef.current.load(); if (isPlaying) { audioRef.current.play().catch(() => {}); } }
-  }, [currentRadio, isPlaying]);
+  }, [isPlaying]); 
 
   useEffect(() => {
     if ('mediaSession' in navigator && currentRadio) {
@@ -684,7 +716,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* COMMIT 2: CYBER-TOAST NOTIFICATION (Substitui os alerts nativos chatos) */}
       {toast && (
         <div className="fixed bottom-6 right-6 z-100 bg-zinc-950 border border-zinc-800 text-white px-4 py-3 rounded-lg shadow-[0_0_30px_rgba(0,0,0,0.8)] font-mono text-sm flex items-center gap-3 transition-all animate-in slide-in-from-bottom-5 fade-in duration-300">
           <Terminal size={16} className={activeTheme.text} />
