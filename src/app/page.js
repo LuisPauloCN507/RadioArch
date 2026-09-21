@@ -2,7 +2,7 @@
 
 import Player from '@/components/Player';
 import { radioList } from '@/data/radios';
-import { ChevronDown, ChevronUp, Command, Copy, Disc, Download, Heart, Info, Lightbulb, MapPin, Palette, Play, PlusCircle, Radio, RadioReceiver, Search, Square, Terminal, Timer, Trash2, Upload, Volume2, VolumeX, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Code2, Command, Copy, Disc, Heart, Info, Lightbulb, MapPin, Palette, Play, PlusCircle, Radio, RadioReceiver, Search, Square, Terminal, Timer, Trash2, Upload, Download, Volume2, VolumeX, X } from 'lucide-react';
 import Image from 'next/image';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -393,23 +393,19 @@ export default function Home() {
     setIsPlaying((prev) => !prev); playClickSound(); 
   }, [isPlaying, isRecording, stopRecording, playClickSound]);
 
-  // CORREÇÃO DOS BUGS: Refatoração da lógica de play/pause e carregamento da stream
   const changeRadio = useCallback((index) => { 
     if (isRecording) stopRecording(); 
-    // Removemos o setIsPlaying(false) daqui, para manter a música a tocar sem interrupções se já estivesse on air!
     setIsLoading(true); 
     setActiveIndex(index); 
     playClickSound(); 
   }, [isRecording, stopRecording, playClickSound]);
 
-  // Efeito 1: Lida APENAS com a mudança de estação de rádio (mudança de link)
   useEffect(() => {
     const audio = audioRef.current;
     if (audio && currentRadio) {
       audio.src = currentRadio.url;
       audio.load();
       
-      // Se o rádio já estava a tocar, tenta tocar a nova estação automaticamente.
       if (isPlaying) {
         audio.play().then(() => startVisualizer()).catch(() => setIsPlaying(false));
       }
@@ -417,13 +413,11 @@ export default function Home() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentRadio]);
 
-  // Efeito 2: Lida APENAS com o botão Play/Pause (estado)
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !currentRadio) return;
 
     if (isPlaying) {
-      // Iniciação do Contexto de Áudio
       if (!audioCtxRef.current) {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         audioCtxRef.current = new AudioContext(); 
@@ -437,7 +431,6 @@ export default function Home() {
       }
       if (audioCtxRef.current.state === 'suspended') audioCtxRef.current.resume();
       
-      // Só dispara um play() novo se o áudio estiver realmente pausado.
       if (audio.paused) {
         audio.play()
           .then(() => startVisualizer())
@@ -527,7 +520,8 @@ export default function Home() {
         <div id="ambilight-glow" className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-200 h-150 rounded-full pointer-events-none blur-[150px] transition-colors duration-1000 ${activeTheme.bg} opacity-20`} style={{ transition: 'background-color 1s ease, transform 0.1s ease-out, opacity 0.1s ease-out' }}></div>
         <FadeInSection>
           <div className="text-center mb-12 relative z-10">
-            <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-transparent bg-clip-text bg-linear-to-br from-white via-zinc-200 to-zinc-500 mb-6">A Frequência Perfeita <br className="hidden md:block" /> para o Teu Flow.</h1>
+            {/* O TEXTO FOI ALTERADO AQUI */}
+            <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-transparent bg-clip-text bg-linear-to-br from-white via-zinc-200 to-zinc-500 mb-6">A Frequência Perfeita.</h1>
           </div>
         </FadeInSection>
         <FadeInSection delay={200}>
