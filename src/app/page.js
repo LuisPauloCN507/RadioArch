@@ -2,7 +2,7 @@
 
 import Player from '@/components/Player';
 import { radioList } from '@/data/radios';
-import { ChevronDown, ChevronUp, Code2, Command, Copy, Disc, Heart, Info, Lightbulb, MapPin, Palette, Play, PlusCircle, Radio, RadioReceiver, Search, Square, Terminal, Timer, Trash2, Upload, Download, Volume2, VolumeX, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Command, Copy, Disc, Download, Heart, Info, Lightbulb, MapPin, Palette, Play, PlusCircle, Radio, RadioReceiver, Search, Square, Terminal, Timer, Trash2, Upload, Volume2, VolumeX, X } from 'lucide-react';
 import Image from 'next/image';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -501,12 +501,25 @@ export default function Home() {
       
       <nav className="fixed top-0 w-full z-50 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-900/50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2"><RadioReceiver className={activeTheme.text} size={24} /><span className="font-mono font-bold tracking-widest uppercase text-lg">RADIO<span className="text-zinc-500">ARCH</span></span></div>
+          
+          {/* AQUI ENTRA A TUA NOVA LOGO DE IMAGEM */}
+          <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => { document.getElementById('app').scrollIntoView({ behavior: 'smooth' }); }}>
+            <Image 
+              src="/logo.png" 
+              alt="RadioArch" 
+              width={140} 
+              height={45} 
+              className="object-contain drop-shadow-md" 
+              unoptimized 
+            />
+          </div>
+
           <div className="hidden md:flex gap-8 text-sm font-medium text-zinc-400">
             <a href="#app" className={`hover:${activeTheme.text} transition-colors`}>Player</a>
             <a href="#stations" className={`hover:${activeTheme.text} transition-colors`}>Estações</a>
             <a href="#inject" className={`hover:${activeTheme.text} transition-colors`}>Scanner & Injeção</a>
           </div>
+          
           <div className="flex items-center gap-4">
              <button onClick={() => setShowCommandCenter(true)} className="hidden sm:flex items-center gap-2 text-xs font-mono text-zinc-500 hover:text-white transition-colors border border-zinc-800 px-3 py-1.5 rounded bg-zinc-900">
                <Command size={14}/> <span>Acessibilidade [ K ]</span>
@@ -520,7 +533,6 @@ export default function Home() {
         <div id="ambilight-glow" className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-200 h-150 rounded-full pointer-events-none blur-[150px] transition-colors duration-1000 ${activeTheme.bg} opacity-20`} style={{ transition: 'background-color 1s ease, transform 0.1s ease-out, opacity 0.1s ease-out' }}></div>
         <FadeInSection>
           <div className="text-center mb-12 relative z-10">
-            {/* O TEXTO FOI ALTERADO AQUI */}
             <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-transparent bg-clip-text bg-linear-to-br from-white via-zinc-200 to-zinc-500 mb-6">A Frequência Perfeita.</h1>
           </div>
         </FadeInSection>
