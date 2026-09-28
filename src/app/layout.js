@@ -1,33 +1,32 @@
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
+import './globals.css';
 
-const metadata = {
-  title: "RadioArch | Sua Conexão Digital",
-  description: "Biblioteca de Web Radios focados em música de alta qualidade.",
+export const metadata = {
+  title: 'RadioArch | A Frequência Perfeita',
+  description: 'Sintoniza as melhores frequências globais com uma interface retro-futurista de alta performance.',
+  openGraph: {
+    title: 'RadioArch | A Frequência Perfeita',
+    description: 'Sintoniza as melhores frequências globais com uma interface retro-futurista.',
+    url: 'https://radioarch.vercel.app',
+    siteName: 'RadioArch',
+    images: [
+      {
+        url: '/logo.png', 
+        width: 800,
+        height: 600,
+      },
+    ],
+    locale: 'pt_BR',
+    type: 'website',
+  },
+  icons: {
+    icon: '/logo.png',
+  },
 };
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-export { metadata };
 
 export default function RootLayout({ children }) {
   return (
-    <html
-      lang="pt-br"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body 
-        className="min-h-full flex flex-col" 
-        suppressHydrationWarning
-      >
+    <html lang="pt-BR" className="scroll-smooth">
+      <body className="antialiased bg-zinc-950 text-white">
         {children}
       </body>
     </html>

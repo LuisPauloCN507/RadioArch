@@ -2,7 +2,7 @@
 
 import Player from '@/components/Player';
 import { radioList } from '@/data/radios';
-import { ChevronDown, ChevronUp, Command, Copy, Disc, Download, Heart, Info, Lightbulb, MapPin, Palette, Play, PlusCircle, Radio, RadioReceiver, Search, Square, Terminal, Timer, Trash2, Upload, Volume2, VolumeX, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Code2, Command, Copy, Disc, Globe, Heart, Info, Lightbulb, MapPin, Palette, Play, PlusCircle, Radio, RadioReceiver, Search, Square, Terminal, Timer, Trash2, Upload, Download, Volume2, VolumeX, X } from 'lucide-react';
 import Image from 'next/image';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -502,16 +502,9 @@ export default function Home() {
       <nav className="fixed top-0 w-full z-50 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-900/50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           
-          {/* AQUI ENTRA A TUA NOVA LOGO DE IMAGEM */}
+          {/* Logo */}
           <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => { document.getElementById('app').scrollIntoView({ behavior: 'smooth' }); }}>
-            <Image 
-              src="/logo.png" 
-              alt="RadioArch" 
-              width={140} 
-              height={45} 
-              className="object-contain drop-shadow-md" 
-              unoptimized 
-            />
+            <Image src="/logo.png" alt="RadioArch" width={140} height={45} className="object-contain drop-shadow-md" unoptimized />
           </div>
 
           <div className="hidden md:flex gap-8 text-sm font-medium text-zinc-400">
@@ -681,21 +674,53 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="developer" className="py-24 bg-zinc-950 border-t border-zinc-800 px-6">
+      {/* NOVO RODAPÉ PROFISSIONAL COM SVGs PERSONALIZADOS */}
+      <footer id="developer" className="py-12 bg-zinc-950 border-t border-zinc-900 px-6 relative overflow-hidden z-10">
+        <div className="absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(0,0,0,0.15)_50%)] bg-size-[100%_4px] opacity-20 pointer-events-none"></div>
         <FadeInSection>
-          <div className="max-w-3xl mx-auto text-center">
-            <div className={`w-24 h-24 mx-auto bg-zinc-800 rounded-full border-2 ${activeTheme.border} mb-6 flex items-center justify-center text-3xl font-bold ${activeTheme.text} transition-colors duration-500`} style={{ boxShadow: `0 0 20px ${activeTheme.shadow}` }}>L3</div>
-            <h2 className="text-3xl font-black mb-2">Luis Paulo <span className="text-zinc-500">(@Lupd3v)</span></h2>
-            <div className={`flex items-center justify-center gap-2 ${activeTheme.text} font-mono text-sm mb-6`}><MapPin size={16} /> Piauí, Brasil</div>
+          <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8 relative z-10">
             
-            <div className="flex flex-wrap justify-center gap-4 mt-8 pt-8 border-t border-zinc-800">
-               <button onClick={handleExportBackup} className="inline-flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 text-white px-5 py-2.5 rounded-lg font-mono text-xs border border-zinc-700 transition-colors"><Download size={14} className={activeTheme.text} /> Exportar Setup (.json)</button>
-               <input type="file" ref={fileInputRef} onChange={handleImportBackup} accept=".json" className="hidden" />
-               <button onClick={() => fileInputRef.current?.click()} className="inline-flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 text-white px-5 py-2.5 rounded-lg font-mono text-xs border border-zinc-700 transition-colors"><Upload size={14} className={activeTheme.text} /> Restaurar Backup</button>
+            <div className="flex items-center gap-4">
+              <div className={`w-12 h-12 bg-zinc-900 rounded-full border border-zinc-800 flex items-center justify-center font-bold ${activeTheme.text} shadow-[0_0_15px_rgba(0,0,0,0.5)]`}>
+                L3
+              </div>
+              <div>
+                <h2 className="text-lg font-black text-white">Luis Paulo <span className="text-zinc-500 font-normal">(@Lupd3v)</span></h2>
+                <div className="flex items-center gap-1 text-xs text-zinc-500 font-mono mt-1">
+                  <MapPin size={12} className={activeTheme.text} /> Piauí, Brasil
+                </div>
+              </div>
             </div>
+
+            <div className="flex flex-wrap justify-center gap-3">
+               <button onClick={handleExportBackup} className="inline-flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white px-4 py-2 rounded-lg font-mono text-xs border border-zinc-800 transition-colors"><Download size={14} className={activeTheme.text} /> Backup (.json)</button>
+               <input type="file" ref={fileInputRef} onChange={handleImportBackup} accept=".json" className="hidden" />
+               <button onClick={() => fileInputRef.current?.click()} className="inline-flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white px-4 py-2 rounded-lg font-mono text-xs border border-zinc-800 transition-colors"><Upload size={14} className={activeTheme.text} /> Restore</button>
+            </div>
+
+            <div className="flex gap-4">
+              {/* GitHub SVG */}
+              <a href="https://github.com/Lupd3v" target="_blank" rel="noopener noreferrer" className="text-zinc-500 hover:text-white transition-colors p-2.5 bg-zinc-900 rounded-lg border border-zinc-800 hover:border-zinc-600">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
+              </a>
+              {/* LinkedIn SVG */}
+              <a href="https://linkedin.com/in/SEU-LINKEDIN" target="_blank" rel="noopener noreferrer" className="text-zinc-500 hover:text-white transition-colors p-2.5 bg-zinc-900 rounded-lg border border-zinc-800 hover:border-zinc-600">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect width="4" height="12" x="2" y="9"/><circle cx="4" cy="4" r="2"/></svg>
+              </a>
+              {/* Globe Icon para o Portfolio (Este usa o Lucide normalmente) */}
+              <a href="https://SEU-PORTFOLIO.com" target="_blank" rel="noopener noreferrer" className="text-zinc-500 hover:text-white transition-colors p-2.5 bg-zinc-900 rounded-lg border border-zinc-800 hover:border-zinc-600">
+                <Globe size={18} />
+              </a>
+            </div>
+            
+          </div>
+          
+          <div className="max-w-5xl mx-auto mt-8 pt-8 border-t border-zinc-900 text-center flex flex-col items-center gap-3">
+             <Image src="/logo.png" alt="RadioArch Logo" width={120} height={40} className="opacity-20 grayscale" unoptimized />
+             <p className="text-[10px] text-zinc-600 font-mono uppercase tracking-widest">© {new Date().getFullYear()} RadioArch System. Desenvolvido por Luis Paulo.</p>
           </div>
         </FadeInSection>
-      </section>
+      </footer>
 
       {showCommandCenter && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-100 flex items-center justify-center p-4">
