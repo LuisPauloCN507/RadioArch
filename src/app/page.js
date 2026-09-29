@@ -2,7 +2,7 @@
 
 import Player from '@/components/Player';
 import { radioList } from '@/data/radios';
-import { ChevronDown, ChevronUp, Code2, Command, Copy, Disc, Globe, Heart, Info, Lightbulb, MapPin, Palette, Play, PlusCircle, Radio, RadioReceiver, Search, Square, Terminal, Timer, Trash2, Upload, Download, Volume2, VolumeX, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Command, Copy, Download, Globe, Heart, Info, Lightbulb, MapPin, Palette, Play, PlusCircle, Radio, RadioReceiver, Search, Square, Terminal, Timer, Trash2, Upload, Volume2, VolumeX, X } from 'lucide-react';
 import Image from 'next/image';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -41,7 +41,7 @@ function VerticalDeckItem({ radio, isCenter, offset, onSelect, activeTheme }) {
   return (
     <div onClick={onSelect} className={`absolute w-full cursor-pointer transition-all duration-500 ease-out flex justify-center ${isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
       style={{ transform: `translateY(${offset * VERTICAL_SPACING}px) scale(${isCenter ? 1.05 : 0.85}) perspective(800px) rotateX(${offset * -25}deg)`, zIndex: 10 - Math.abs(offset), filter: isCenter ? 'none' : 'grayscale(80%) brightness(40%)' }}>
-      <div className={`transition-all duration-500 w-64 h-40 flex items-center justify-center ${isCenter ? 'scale-110' : 'drop-shadow-md'}`} style={{ dropShadow: isCenter ? `0 0 15px ${activeTheme.shadow}` : 'none' }}>
+      <div className={`transition-all duration-500 w-56 h-36 md:w-64 md:h-40 flex items-center justify-center ${isCenter ? 'scale-110' : 'drop-shadow-md'}`} style={{ dropShadow: isCenter ? `0 0 15px ${activeTheme.shadow}` : 'none' }}>
         {radio.logo ? (
           <Image 
             src={radio.logo} 
@@ -500,11 +500,11 @@ export default function Home() {
       <audio ref={audioRef} crossOrigin="anonymous" onWaiting={() => setIsLoading(true)} onLoadStart={() => setIsLoading(true)} onPlaying={() => setIsLoading(false)} onCanPlay={() => setIsLoading(false)} onError={() => setIsLoading(true)} />
       
       <nav className="fixed top-0 w-full z-50 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-900/50">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           
           {/* Logo */}
-          <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => { document.getElementById('app').scrollIntoView({ behavior: 'smooth' }); }}>
-            <Image src="/logo.png" alt="RadioArch" width={140} height={45} className="object-contain drop-shadow-md" unoptimized />
+          <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity shrink-0" onClick={() => { document.getElementById('app').scrollIntoView({ behavior: 'smooth' }); }}>
+            <Image src="/logo.png" alt="RadioArch" width={140} height={45} className="object-contain drop-shadow-md w-24 sm:w-28 md:w-[140px]" unoptimized />
           </div>
 
           <div className="hidden md:flex gap-8 text-sm font-medium text-zinc-400">
@@ -513,28 +513,34 @@ export default function Home() {
             <a href="#inject" className={`hover:${activeTheme.text} transition-colors`}>Scanner & Injeção</a>
           </div>
           
-          <div className="flex items-center gap-4">
-             <button onClick={() => setShowCommandCenter(true)} className="hidden sm:flex items-center gap-2 text-xs font-mono text-zinc-500 hover:text-white transition-colors border border-zinc-800 px-3 py-1.5 rounded bg-zinc-900">
-               <Command size={14}/> <span>Acessibilidade [ K ]</span>
+          <div className="flex items-center gap-3 md:gap-4">
+             <button onClick={() => setShowCommandCenter(true)} className="hidden sm:flex items-center gap-2 text-xs font-mono text-zinc-500 hover:text-white transition-colors border border-zinc-800 px-3 py-1.5 rounded bg-zinc-900 shrink-0">
+               <Command size={14}/> <span>[ K ]</span>
              </button>
-             <button onClick={() => { document.getElementById('app').scrollIntoView({ behavior: 'smooth' }); }} className="bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2 rounded-md font-bold text-sm border border-zinc-700">Sintonizar</button>
+             <button onClick={() => { document.getElementById('app').scrollIntoView({ behavior: 'smooth' }); }} className="bg-zinc-800 hover:bg-zinc-700 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-md font-bold text-xs md:text-sm border border-zinc-700 shrink-0">
+               Sintonizar
+             </button>
           </div>
         </div>
       </nav>
 
-      <section id="app" className="pt-32 pb-24 px-4 md:px-8 flex flex-col items-center justify-center min-h-screen relative">
-        <div id="ambilight-glow" className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-200 h-150 rounded-full pointer-events-none blur-[150px] transition-colors duration-1000 ${activeTheme.bg} opacity-20`} style={{ transition: 'background-color 1s ease, transform 0.1s ease-out, opacity 0.1s ease-out' }}></div>
+      <section id="app" className="pt-32 pb-16 md:pb-24 px-4 md:px-8 flex flex-col items-center justify-center min-h-screen relative">
+        <div id="ambilight-glow" className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120vw] h-[120vw] md:w-200 md:h-200 rounded-full pointer-events-none blur-[100px] md:blur-[150px] transition-colors duration-1000 ${activeTheme.bg} opacity-20`} style={{ transition: 'background-color 1s ease, transform 0.1s ease-out, opacity 0.1s ease-out' }}></div>
         <FadeInSection>
-          <div className="text-center mb-12 relative z-10">
-            <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-transparent bg-clip-text bg-linear-to-br from-white via-zinc-200 to-zinc-500 mb-6">A Frequência Perfeita.</h1>
+          <div className="text-center mb-8 md:mb-12 relative z-10 px-2">
+            <h1 className="text-4xl sm:text-5xl md:text-7xl font-black tracking-tighter text-transparent bg-clip-text bg-linear-to-br from-white via-zinc-200 to-zinc-500 mb-4 md:mb-6">A Frequência Perfeita.</h1>
           </div>
         </FadeInSection>
+        
         <FadeInSection delay={200}>
-          <div className="relative w-full max-w-5xl h-150 bg-zinc-800 rounded-[2.5rem] p-6 shadow-[0_35px_60px_-15px_rgba(0,0,0,0.8),inset_0_2px_4px_rgba(255,255,255,0.1)] border border-zinc-700 flex flex-col md:flex-row gap-8 z-10 mx-auto">
-            <div className="w-full md:w-5/12 h-full relative rounded-2xl bg-[#1e1e24] shadow-inner overflow-hidden border-4 border-zinc-900 flex flex-col items-center justify-between py-6">
+          {/* AQUI ESTAVA O SEGREDO! Substituímos o md:h-auto por md:h-150 para trancar exatamente a altura no Desktop! */}
+          <div className="relative w-full max-w-5xl flex flex-col md:flex-row h-auto md:h-150 bg-zinc-800 rounded-4xl md:rounded-[2.5rem] p-4 md:p-6 shadow-[0_35px_60px_-15px_rgba(0,0,0,0.8),inset_0_2px_4px_rgba(255,255,255,0.1)] border border-zinc-700 gap-6 md:gap-8 z-10 mx-auto">
+            
+            {/* O DECK AGORA FUNCIONA A 100% no PC e a h-80 no mobile */}
+            <div className="w-full md:w-5/12 h-80 md:h-full relative rounded-2xl bg-[#1e1e24] shadow-inner overflow-hidden border-4 border-zinc-900 flex flex-col items-center justify-between py-4 md:py-6 shrink-0">
               <div className="absolute inset-0 bg-[radial-gradient(#000_2px,transparent_2px)] bg-size-[10px_10px] opacity-40 pointer-events-none"></div>
               <button onClick={() => changeRadio(previousIndex)} className="relative z-10 w-16 h-10 bg-zinc-700 hover:bg-zinc-600 rounded-lg shadow-[0_4px_0_#18181b] active:translate-y-1 flex items-center justify-center transition-all border border-zinc-600"><ChevronUp size={24} className="text-zinc-300" /></button>
-              <div className="relative w-full h-95 flex items-center justify-center">
+              <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
                 {displayRadios.map((radio, index) => {
                   const isCenter = index === safeIndex; const offset = index - safeIndex;
                   return <VerticalDeckItem key={radio.id} radio={radio} isCenter={isCenter} offset={offset} onSelect={() => { changeRadio(index); if (!isPlaying) togglePlay(); }} activeTheme={activeTheme} />;
@@ -542,34 +548,36 @@ export default function Home() {
               </div>
               <button onClick={() => changeRadio(nextIndex)} className="relative z-10 w-16 h-10 bg-zinc-700 hover:bg-zinc-600 rounded-lg shadow-[0_4px_0_#18181b] active:translate-y-1 flex items-center justify-center transition-all border border-zinc-600"><ChevronDown size={24} className="text-zinc-300" /></button>
             </div>
+
             <div className="flex-1 h-full flex flex-col justify-between py-2">
-              <div className="w-full h-56 bg-[#050505] rounded-xl border-[6px] border-zinc-900 shadow-[inset_0_0_20px_rgba(0,0,0,1)] relative flex flex-col p-6 overflow-hidden">
+              <div className="w-full h-auto min-h-56 md:h-56 bg-[#050505] rounded-xl border-4 md:border-[6px] border-zinc-900 shadow-[inset_0_0_20px_rgba(0,0,0,1)] relative flex flex-col p-4 md:p-6 overflow-hidden">
                 <div className={`absolute inset-0 bg-linear-to-tr from-transparent via-white/5 to-transparent pointer-events-none transition-opacity ${backlight ? 'opacity-100' : 'opacity-20'}`}></div>
                 <div className="flex justify-between items-start w-full relative z-10">
                   <div className="flex flex-col gap-1">
-                    <h1 className={`text-lg font-black tracking-[0.3em] uppercase italic font-mono flex items-center gap-4 transition-all ${backlight ? 'opacity-80 text-white' : 'opacity-30 text-zinc-600'}`}><span>RADIO<span className={activeTheme.text}>ARCH</span></span></h1>
-                    <div className="flex gap-2 font-mono text-[9px] tracking-widest font-bold"><span className={`${band === 'AM' ? 'text-amber-500' : 'text-zinc-800'}`}>[AM]</span><span className={`${band === 'FM' ? activeTheme.text : 'text-zinc-800'}`}>[FM]</span><span className={`${isMuted ? 'text-red-500 animate-pulse' : 'text-zinc-800'}`}>[MUTED]</span></div>
+                    <h1 className={`text-base sm:text-lg font-black tracking-[0.2em] md:tracking-[0.3em] uppercase italic font-mono flex items-center gap-2 md:gap-4 transition-all ${backlight ? 'opacity-80 text-white' : 'opacity-30 text-zinc-600'}`}><span>RADIO<span className={activeTheme.text}>ARCH</span></span></h1>
+                    <div className="flex gap-2 font-mono text-[8px] md:text-[9px] tracking-widest font-bold"><span className={`${band === 'AM' ? 'text-amber-500' : 'text-zinc-800'}`}>[AM]</span><span className={`${band === 'FM' ? activeTheme.text : 'text-zinc-800'}`}>[FM]</span><span className={`${isMuted ? 'text-red-500 animate-pulse' : 'text-zinc-800'}`}>[MUTED]</span></div>
                   </div>
                   <div className="flex flex-col items-end transition-colors" style={{ color: lcdColor }}>
-                    <div className="flex items-center gap-3 mb-1">{sleepTimer > 0 && <span className="text-zinc-500 text-[10px] font-mono tracking-widest">⏱ {formatTime(timeLeft)}</span>}<span className={`text-lg font-mono font-bold tracking-widest`} style={{ textShadow: backlight ? `0 0 8px ${activeTheme.shadow}` : 'none' }}>{currentTime}</span></div>
-                    <span className={`${isRecording ? 'text-red-500' : isPlaying && isLoading ? (backlight ? 'text-yellow-400' : 'text-yellow-700') : ''} text-xs font-mono font-bold animate-pulse`}>{isRecording ? 'RECORDING' : isPlaying ? (isLoading ? 'TUNING...' : 'ON AIR') : 'STANDBY'}</span>
+                    <div className="flex items-center gap-2 md:gap-3 mb-1">{sleepTimer > 0 && <span className="text-zinc-500 text-[9px] md:text-[10px] font-mono tracking-widest">⏱ {formatTime(timeLeft)}</span>}<span className={`text-base md:text-lg font-mono font-bold tracking-widest`} style={{ textShadow: backlight ? `0 0 8px ${activeTheme.shadow}` : 'none' }}>{currentTime}</span></div>
+                    <span className={`${isRecording ? 'text-red-500' : isPlaying && isLoading ? (backlight ? 'text-yellow-400' : 'text-yellow-700') : ''} text-[10px] md:text-xs font-mono font-bold animate-pulse`}>{isRecording ? 'RECORDING' : isPlaying ? (isLoading ? 'TUNING...' : 'ON AIR') : 'STANDBY'}</span>
                   </div>
                 </div>
-                <div className="flex-1 flex flex-col justify-center items-center mt-2 relative z-10">
-                  <canvas ref={canvasRef} width={280} height={50} className={displayMode ? 'hidden' : 'mb-4'} />
-                  <div className={displayMode ? 'hidden' : 'flex flex-col items-center transition-colors'} style={{ color: lcdColor }}><h2 className={`text-2xl font-bold tracking-wider text-center line-clamp-1 ${backlight ? 'text-white' : 'text-zinc-500'}`}>{currentRadio?.name}</h2><p className="text-xs mt-2 font-medium tracking-[0.3em] uppercase font-mono">[{currentRadio?.genre}]</p></div>
-                  <div className={`w-full flex flex-col gap-1.5 font-mono text-[10px] opacity-90 transition-colors ${displayMode ? 'block' : 'hidden'}`} style={{ color: lcdColor }}>
+                <div className="flex-1 flex flex-col justify-center items-center mt-4 relative z-10 w-full">
+                  <canvas ref={canvasRef} width={280} height={50} className={`w-full max-w-60 sm:max-w-70 ${displayMode ? 'hidden' : 'mb-4'}`} />
+                  <div className={displayMode ? 'hidden' : 'flex flex-col items-center transition-colors w-full px-2'} style={{ color: lcdColor }}><h2 className={`text-lg md:text-2xl font-bold tracking-wider text-center line-clamp-1 ${backlight ? 'text-white' : 'text-zinc-500'}`}>{currentRadio?.name}</h2><p className="text-[10px] md:text-xs mt-1 md:mt-2 font-medium tracking-[0.2em] md:tracking-[0.3em] uppercase font-mono text-center">[{currentRadio?.genre}]</p></div>
+                  <div className={`w-full flex flex-col gap-1.5 font-mono text-[9px] md:text-[10px] opacity-90 transition-colors ${displayMode ? 'block' : 'hidden'}`} style={{ color: lcdColor }}>
                     <p className={`border-b pb-1 mb-1 font-bold ${backlight ? 'border-current text-white' : 'border-zinc-800 text-zinc-400'}`}>SYSTEM DIAGNOSTICS</p>
                     <p>FREQ: {(88.0 + safeIndex * 2.4).toFixed(1)} MHz</p>
                     <p>COLOR: {activeTheme.name} / BACKLIGHT: {backlight ? 'ON' : 'OFF'}</p>
-                    <p className="flex items-center justify-between">
+                    <p className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 mt-1">
                       <span>STATUS: {isRecording ? 'REC ACTIVE' : isLoading ? 'SYNCING...' : (isPlaying ? 'ACTIVE' : 'IDLE')}</span>
-                      <button onClick={handleCopyUrl} className="ml-2 bg-zinc-800 text-zinc-300 px-1.5 py-0.5 rounded hover:text-white flex items-center gap-1 border border-zinc-700 transition-colors"><Copy size={10}/> URL</button>
+                      <button onClick={handleCopyUrl} className="bg-zinc-800 text-zinc-300 px-1.5 py-0.5 rounded hover:text-white flex items-center gap-1 border border-zinc-700 transition-colors"><Copy size={10}/> URL</button>
                     </p>
                   </div>
                 </div>
               </div>
-              <div className="grid grid-cols-3 md:flex md:flex-wrap justify-center gap-3 mt-8 px-2">
+              
+              <div className="grid grid-cols-4 md:flex md:flex-wrap justify-center gap-2 md:gap-3 mt-6 md:mt-8 px-1">
                 <button onClick={togglePlay} className="h-14 md:w-14 bg-zinc-700 rounded-lg shadow-[0_4px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group">{isPlaying ? <Square size={16} className={activeTheme.text} /> : <Play size={16} className="text-zinc-300 group-hover:text-white" />}<span className="text-[8px] font-bold tracking-widest uppercase text-zinc-400">Pwr</span></button>
                 <button onClick={handleToggleFavorite} className="h-14 md:w-14 bg-zinc-700 rounded-lg shadow-[0_4px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group"><Heart size={16} className={favorites.includes(currentRadio?.id) ? 'text-red-500 fill-red-500' : 'text-zinc-300 group-hover:text-white'} /><span className="text-[8px] font-bold tracking-widest uppercase text-zinc-400">Fav</span></button>
                 <button onClick={toggleBand} className={`h-14 md:w-14 rounded-lg shadow-[0_4px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group ${band === 'AM' ? 'bg-amber-900/40' : 'bg-zinc-700'}`}><Radio size={16} className={band === 'AM' ? 'text-amber-500' : activeTheme.text} /><span className={`text-[8px] font-bold tracking-widest uppercase ${band === 'AM' ? 'text-amber-500' : activeTheme.text}`}>{band}</span></button>
@@ -578,34 +586,34 @@ export default function Home() {
                 <button onClick={toggleMute} className={`h-14 md:w-14 rounded-lg shadow-[0_4px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group ${isMuted ? 'bg-red-900/30 border-red-900' : 'bg-zinc-700'}`}>{isMuted ? <VolumeX size={16} className="text-red-500" /> : <Volume2 size={16} className="text-zinc-300 group-hover:text-white" />}<span className={`text-[8px] font-bold tracking-widest uppercase ${isMuted ? 'text-red-500' : 'text-zinc-400'}`}>Mut</span></button>
                 <button onClick={toggleDisplay} className={`h-14 md:w-14 rounded-lg shadow-[0_4px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group ${displayMode ? activeTheme.bg : 'bg-zinc-700'}`}><Info size={16} className={displayMode ? activeTheme.text : 'text-zinc-300 group-hover:text-white'} /><span className={`text-[8px] font-bold tracking-widest uppercase ${displayMode ? activeTheme.text : 'text-zinc-400'}`}>Info</span></button>
                 <button onClick={cycleTheme} className={`h-14 md:w-14 rounded-lg shadow-[0_4px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border border-zinc-600 group bg-zinc-800 hover:bg-zinc-700`}><Palette size={16} className={activeTheme.text} /><span className={`text-[8px] font-bold tracking-widest uppercase ${activeTheme.text}`}>Cor</span></button>
-                <button onClick={toggleRecord} className={`h-14 md:w-14 rounded-lg shadow-[0_4px_0_#18181b] active:translate-y-1 transition-all flex flex-col items-center justify-center gap-1 border group ${isRecording ? 'bg-red-900/30 border-red-900' : 'bg-zinc-700 border-zinc-600'}`}><Disc size={16} className={isRecording ? 'text-red-500 animate-pulse' : 'text-zinc-300 group-hover:text-white'} /><span className={`text-[8px] font-bold tracking-widest uppercase ${isRecording ? 'text-red-500' : 'text-zinc-400'}`}>Rec</span></button>
               </div>
-              <div className="mt-8 bg-zinc-900 rounded-xl p-5 border-2 border-zinc-950 shadow-inner flex items-center gap-6">
+              
+              <div className="mt-6 md:mt-8 bg-zinc-900 rounded-xl p-4 md:p-5 border-2 border-zinc-950 shadow-inner flex items-center gap-4 md:gap-6">
                 <style dangerouslySetInnerHTML={{__html: `.fader-thumb::-webkit-slider-thumb { appearance: none; width: 28px; height: 40px; background: #52525b; border: 2px solid #27272a; border-radius: 4px; cursor: grab; box-shadow: 0 4px 6px rgba(0,0,0,0.5), inset 0 2px 0 rgba(255,255,255,0.2); } .fader-thumb::-webkit-slider-thumb:active { cursor: grabbing; }`}} />
-                <span className="text-xs font-mono font-bold text-zinc-500">MIN</span>
+                <span className="text-[10px] md:text-xs font-mono font-bold text-zinc-500">MIN</span>
                 <div className="relative flex-1 h-3 bg-black rounded-full shadow-inner flex items-center"><input type="range" min="0" max="1" step="0.01" value={volume} onChange={(e) => { setVolume(parseFloat(e.target.value)); if (isMuted) toggleMute(); }} className="fader-thumb absolute w-full h-full appearance-none bg-transparent outline-none z-10" /><div className={`h-full rounded-full transition-all opacity-80`} style={{ width: `${volume * 100}%`, backgroundColor: activeTheme.hex }}></div></div>
-                <span className="text-xs font-mono font-bold text-zinc-500">MAX</span>
+                <span className="text-[10px] md:text-xs font-mono font-bold text-zinc-500">MAX</span>
               </div>
             </div>
           </div>
         </FadeInSection>
       </section>
 
-      <section id="inject" className="py-24 bg-zinc-900/50 border-t border-zinc-800 px-6">
+      <section id="inject" className="py-16 md:py-24 bg-zinc-900/50 border-t border-zinc-800 px-4 md:px-6">
         <div className="max-w-6xl mx-auto">
           <FadeInSection>
-            <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-black mb-4">Adiciona Novas <span className={activeTheme.text}>Frequências.</span></h2>
-              <p className="text-zinc-400">Injeta a tua própria URL ou pesquisa no banco de dados global da Radio Browser API.</p>
+            <div className="text-center mb-8 md:mb-12">
+              <h2 className="text-3xl md:text-4xl font-black mb-2 md:mb-4">Adiciona Novas <span className={activeTheme.text}>Frequências.</span></h2>
+              <p className="text-zinc-400 text-sm md:text-base">Injeta a tua própria URL ou pesquisa no banco de dados global.</p>
             </div>
             
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <form onSubmit={handleAddCustomRadio} className="bg-zinc-950 border border-zinc-800 p-8 rounded-2xl shadow-xl flex flex-col gap-6 h-full justify-between">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
+              <form onSubmit={handleAddCustomRadio} className="bg-zinc-950 border border-zinc-800 p-6 md:p-8 rounded-2xl shadow-xl flex flex-col gap-6 h-full justify-between">
                 <div>
-                  <h3 className="font-bold text-xl mb-4 flex justify-between items-center border-b border-zinc-800 pb-2">
+                  <h3 className="font-bold text-lg md:text-xl mb-4 flex justify-between items-center border-b border-zinc-800 pb-2">
                     <span className="flex items-center gap-2"><PlusCircle className={activeTheme.text}/> Injeção Manual</span>
                     {customRadios.length > 0 && (
-                      <button type="button" onClick={handleClearCustomRadios} className="text-xs text-red-500 hover:text-red-400 flex items-center gap-1 transition-colors bg-zinc-900 px-2 py-1 rounded border border-red-900"><Trash2 size={12}/> Limpar Deck</button>
+                      <button type="button" onClick={handleClearCustomRadios} className="text-[10px] md:text-xs text-red-500 hover:text-red-400 flex items-center gap-1 transition-colors bg-zinc-900 px-2 py-1 rounded border border-red-900"><Trash2 size={12}/> Limpar Deck</button>
                     )}
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
@@ -617,15 +625,15 @@ export default function Home() {
                 <button type="submit" className="w-full font-bold px-4 py-3 rounded-lg border border-zinc-700 bg-zinc-800 hover:bg-zinc-700 transition-colors">Injetar no Deck</button>
               </form>
 
-              <div className="bg-zinc-950 border border-zinc-800 p-8 rounded-2xl shadow-xl flex flex-col gap-6">
-                <h3 className="font-bold text-xl flex items-center gap-2 border-b border-zinc-800 pb-2"><Search className={activeTheme.text}/> Global Scanner API</h3>
+              <div className="bg-zinc-950 border border-zinc-800 p-6 md:p-8 rounded-2xl shadow-xl flex flex-col gap-6">
+                <h3 className="font-bold text-lg md:text-xl flex items-center gap-2 border-b border-zinc-800 pb-2"><Search className={activeTheme.text}/> Global Scanner API</h3>
                 <form onSubmit={searchGlobalApi} className="flex gap-2">
-                  <input type="text" placeholder="Pesquisar estilo, país ou nome..." value={apiSearchQuery} onChange={(e) => setApiSearchQuery(e.target.value)} className="flex-1 bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-white outline-none focus:border-cyan-500 font-mono text-sm" />
+                  <input type="text" placeholder="Pesquisar estilo ou país..." value={apiSearchQuery} onChange={(e) => setApiSearchQuery(e.target.value)} className="flex-1 bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-white outline-none focus:border-cyan-500 font-mono text-sm" />
                   <button type="submit" disabled={isSearchingApi} className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg font-bold border border-zinc-700">{isSearchingApi ? '...' : 'Scan'}</button>
                 </form>
                 
                 <div className="flex-1 overflow-y-auto max-h-48 pr-2 flex flex-col gap-2">
-                  {apiResults.length === 0 && !isSearchingApi && <p className="text-zinc-600 text-sm font-mono text-center mt-4">Nenhum resultado de scanner.</p>}
+                  {apiResults.length === 0 && !isSearchingApi && <p className="text-zinc-600 text-sm font-mono text-center mt-4">Nenhum resultado.</p>}
                   {apiResults.map(station => (
                     <div key={station.stationuuid} className="bg-zinc-900 p-3 rounded-lg border border-zinc-800 flex justify-between items-center group hover:border-zinc-600 transition-colors">
                       <div className="min-w-0 flex-1 mr-4">
@@ -642,16 +650,16 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="stations" className="py-24 bg-zinc-900 border-t border-zinc-800 px-6">
+      <section id="stations" className="py-16 md:py-24 bg-zinc-900 border-t border-zinc-800 px-4 md:px-6">
         <div className="max-w-7xl mx-auto">
           <FadeInSection>
-            <div className="text-center mb-16"><h2 className="text-3xl md:text-5xl font-black mb-4">Sintoniza a <span className={activeTheme.text}>Tua Vibe.</span></h2></div>
+            <div className="text-center mb-10 md:mb-16"><h2 className="text-3xl md:text-5xl font-black mb-4">Sintoniza a <span className={activeTheme.text}>Tua Vibe.</span></h2></div>
           </FadeInSection>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
             {displayRadios.slice(0, 8).map((r, i) => (
               <FadeInSection key={r.id} delay={i * 100}>
-                <div className="bg-zinc-950/50 p-6 rounded-2xl border border-zinc-800 flex flex-col items-center text-center hover:border-zinc-500/50 transition-colors cursor-pointer h-full" onClick={() => changeRadio(i)}>
-                  <div className="w-16 h-16 md:w-24 md:h-24 mb-4 drop-shadow-md flex items-center justify-center bg-zinc-900 rounded-xl overflow-hidden">
+                <div className="bg-zinc-950/50 p-4 md:p-6 rounded-2xl border border-zinc-800 flex flex-col items-center text-center hover:border-zinc-500/50 transition-colors cursor-pointer h-full" onClick={() => changeRadio(i)}>
+                  <div className="w-14 h-14 md:w-24 md:h-24 mb-3 md:mb-4 drop-shadow-md flex items-center justify-center bg-zinc-900 rounded-xl overflow-hidden">
                     {r.logo ? (
                       <Image 
                         src={r.logo} 
@@ -662,11 +670,11 @@ export default function Home() {
                         className="w-full h-full object-contain" 
                       />
                     ) : (
-                      <RadioReceiver size={32} className={activeTheme.text} />
+                      <RadioReceiver size={24} className={`md:w-8 md:h-8 ${activeTheme.text}`} />
                     )}
                   </div>
-                  <h3 className="font-bold text-white text-sm md:text-base mb-1 line-clamp-2">{r.name}</h3>
-                  <p className={`text-[10px] font-mono ${activeTheme.text}`}>[{r.genre}]</p>
+                  <h3 className="font-bold text-white text-xs md:text-sm mb-1 line-clamp-2">{r.name}</h3>
+                  <p className={`text-[9px] md:text-[10px] font-mono ${activeTheme.text}`}>[{r.genre}]</p>
                 </div>
               </FadeInSection>
             ))}
@@ -674,41 +682,37 @@ export default function Home() {
         </div>
       </section>
 
-      {/* NOVO RODAPÉ PROFISSIONAL COM SVGs PERSONALIZADOS */}
-      <footer id="developer" className="py-12 bg-zinc-950 border-t border-zinc-900 px-6 relative overflow-hidden z-10">
+      <footer id="developer" className="py-12 bg-zinc-950 border-t border-zinc-900 px-4 md:px-6 relative overflow-hidden z-10">
         <div className="absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(0,0,0,0.15)_50%)] bg-size-[100%_4px] opacity-20 pointer-events-none"></div>
         <FadeInSection>
-          <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8 relative z-10">
+          <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 md:gap-8 relative z-10">
             
             <div className="flex items-center gap-4">
               <div className={`w-12 h-12 bg-zinc-900 rounded-full border border-zinc-800 flex items-center justify-center font-bold ${activeTheme.text} shadow-[0_0_15px_rgba(0,0,0,0.5)]`}>
                 L3
               </div>
               <div>
-                <h2 className="text-lg font-black text-white">Luis Paulo <span className="text-zinc-500 font-normal">(@Lupd3v)</span></h2>
+                <h2 className="text-lg font-black text-white">Luis Paulo <span className="text-zinc-500 font-normal">(@LuisPauloCN507)</span></h2>
                 <div className="flex items-center gap-1 text-xs text-zinc-500 font-mono mt-1">
                   <MapPin size={12} className={activeTheme.text} /> Piauí, Brasil
                 </div>
               </div>
             </div>
 
-            <div className="flex flex-wrap justify-center gap-3">
-               <button onClick={handleExportBackup} className="inline-flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white px-4 py-2 rounded-lg font-mono text-xs border border-zinc-800 transition-colors"><Download size={14} className={activeTheme.text} /> Backup (.json)</button>
+            <div className="flex flex-wrap justify-center gap-2 md:gap-3">
+               <button onClick={handleExportBackup} className="inline-flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white px-3 md:px-4 py-2 rounded-lg font-mono text-xs border border-zinc-800 transition-colors"><Download size={14} className={activeTheme.text} /> Backup (.json)</button>
                <input type="file" ref={fileInputRef} onChange={handleImportBackup} accept=".json" className="hidden" />
-               <button onClick={() => fileInputRef.current?.click()} className="inline-flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white px-4 py-2 rounded-lg font-mono text-xs border border-zinc-800 transition-colors"><Upload size={14} className={activeTheme.text} /> Restore</button>
+               <button onClick={() => fileInputRef.current?.click()} className="inline-flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white px-3 md:px-4 py-2 rounded-lg font-mono text-xs border border-zinc-800 transition-colors"><Upload size={14} className={activeTheme.text} /> Restore</button>
             </div>
 
             <div className="flex gap-4">
-              {/* GitHub SVG */}
               <a href="https://github.com/LuisPauloCN507" target="_blank" rel="noopener noreferrer" className="text-zinc-500 hover:text-white transition-colors p-2.5 bg-zinc-900 rounded-lg border border-zinc-800 hover:border-zinc-600">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
               </a>
-              {/* LinkedIn SVG */}
-              <a href="https://www.linkedin.com/in/luis-paulo-costa-neto-42521a352" target="_blank" rel="noopener noreferrer" className="text-zinc-500 hover:text-white transition-colors p-2.5 bg-zinc-900 rounded-lg border border-zinc-800 hover:border-zinc-600">
+              <a href="www.linkedin.com/in/luis-paulo-costa-neto-42521a352" target="_blank" rel="noopener noreferrer" className="text-zinc-500 hover:text-white transition-colors p-2.5 bg-zinc-900 rounded-lg border border-zinc-800 hover:border-zinc-600">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect width="4" height="12" x="2" y="9"/><circle cx="4" cy="4" r="2"/></svg>
               </a>
-              {/* Globe Icon para o Portfolio (Este usa o Lucide normalmente) */}
-              <a href="https://SEU-PORTFOLIO.com" target="_blank" rel="noopener noreferrer" className="text-zinc-500 hover:text-white transition-colors p-2.5 bg-zinc-900 rounded-lg border border-zinc-800 hover:border-zinc-600">
+              <a href="https://luispaulod3v.vercel.app/" target="_blank" rel="noopener noreferrer" className="text-zinc-500 hover:text-white transition-colors p-2.5 bg-zinc-900 rounded-lg border border-zinc-800 hover:border-zinc-600">
                 <Globe size={18} />
               </a>
             </div>
@@ -725,11 +729,11 @@ export default function Home() {
       {showCommandCenter && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-100 flex items-center justify-center p-4">
           <div className="bg-zinc-950 border border-zinc-800 rounded-2xl w-full max-w-lg shadow-[0_0_50px_rgba(0,0,0,1)] flex flex-col overflow-hidden">
-            <div className="flex justify-between items-center p-6 border-b border-zinc-900">
-              <h3 className="font-bold text-xl flex items-center gap-2"><Command className={activeTheme.text} /> Command Center</h3>
+            <div className="flex justify-between items-center p-4 md:p-6 border-b border-zinc-900">
+              <h3 className="font-bold text-lg md:text-xl flex items-center gap-2"><Command className={activeTheme.text} /> Command Center</h3>
               <button onClick={() => setShowCommandCenter(false)} className="text-zinc-500 hover:text-white transition-colors"><X size={24} /></button>
             </div>
-            <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8 font-mono text-sm">
+            <div className="p-4 md:p-6 grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8 font-mono text-xs md:text-sm">
               <div className="flex justify-between border-b border-zinc-900 pb-2"><span className="text-zinc-400">Play / Pause</span><kbd className="bg-zinc-800 px-2 rounded text-cyan-400">Space</kbd></div>
               <div className="flex justify-between border-b border-zinc-900 pb-2"><span className="text-zinc-400">Próxima Rádio</span><kbd className="bg-zinc-800 px-2 rounded text-cyan-400">→</kbd></div>
               <div className="flex justify-between border-b border-zinc-900 pb-2"><span className="text-zinc-400">Rádio Anterior</span><kbd className="bg-zinc-800 px-2 rounded text-cyan-400">←</kbd></div>
@@ -740,7 +744,7 @@ export default function Home() {
               <div className="flex justify-between border-b border-zinc-900 pb-2"><span className="text-zinc-400">Gravar (REC)</span><kbd className="bg-zinc-800 px-2 rounded text-red-400">R</kbd></div>
               <div className="flex justify-between border-b border-zinc-900 pb-2"><span className="text-zinc-400">Abrir Atalhos</span><kbd className="bg-zinc-800 px-2 rounded text-cyan-400">K</kbd></div>
             </div>
-            <div className="p-4 bg-zinc-900/50 text-center text-xs text-zinc-500 font-mono">
+            <div className="p-3 md:p-4 bg-zinc-900/50 text-center text-[10px] md:text-xs text-zinc-500 font-mono">
               Nota: Os atalhos são desativados enquanto digitas nos formulários.
             </div>
           </div>
@@ -748,7 +752,7 @@ export default function Home() {
       )}
 
       {toast && (
-        <div className="fixed bottom-6 right-6 z-100 bg-zinc-950 border border-zinc-800 text-white px-4 py-3 rounded-lg shadow-[0_0_30px_rgba(0,0,0,0.8)] font-mono text-sm flex items-center gap-3 transition-all animate-in slide-in-from-bottom-5 fade-in duration-300">
+        <div className="fixed bottom-6 right-6 z-100 bg-zinc-950 border border-zinc-800 text-white px-4 py-3 rounded-lg shadow-[0_0_30px_rgba(0,0,0,0.8)] font-mono text-xs md:text-sm flex items-center gap-3 transition-all animate-in slide-in-from-bottom-5 fade-in duration-300">
           <Terminal size={16} className={activeTheme.text} />
           {toast}
         </div>
