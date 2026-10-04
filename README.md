@@ -9,7 +9,6 @@
 </p>
 
 <p align="center">
-  <!-- Lembra-te de colocar o teu link real do Vercel no href abaixo -->
   <a href="https://radio-arch-beige.vercel.app/" target="_blank">
     <img src="https://img.shields.io/badge/Deploy-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Deploy on Vercel" />
   </a>
@@ -26,7 +25,7 @@
 <hr>
 
 ## 🎯 A Proposta
-O **RadioArch** nasceu da vontade de unir a nostalgia dos rádios analógicos e ecrãs LCD antigos com a velocidade e o design das tecnologias web modernas. A proposta é oferecer uma experiência imersiva e altamente personalizável para escutar rádios do mundo inteiro, com um visual "hacker" e comandos de teclado integrados, otimizado tanto para Desktop (simulando um hardware real) como para Mobile.
+O **RadioArch** nasceu da vontade de unir a nostalgia dos rádios analógicos e ecrãs LCD antigos com a velocidade e o design das tecnologias web modernas. A proposta é oferecer uma experiência imersiva e altamente personalizável para escutar rádios do mundo inteiro, com um visual clean e comandos de teclado integrados, otimizado tanto para Desktop (simulando um hardware real) como para Mobile.
 
 ## 💡 Sobre o Projeto
 Desenvolvido por **Luis Paulo (@LuisPauloCN507)**, este projeto serve como um laboratório prático para aplicar conceitos avançados de Front-End, incluindo manipulação de áudio com a Web Audio API, animações complexas baseadas em *scroll* (Intersection Observer), design responsivo extremo (Tailwind CSS) e consumo de APIs externas (Radio Browser API).
