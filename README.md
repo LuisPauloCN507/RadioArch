@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+<p align="center">
+  <img src="./public/logo.png" alt="RadioArch Logo" width="350"/>
+</p>
 
-## Getting Started
+<h1 align="center">📻 RadioArch</h1>
 
-First, run the development server:
+<p align="center">
+  <em>A Frequência Perfeita. Um web player de rádio retro-futurista inspirado em interfaces de terminal e no ecossistema Arch Linux.</em>
+</p>
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+<p align="center">
+  <!-- Lembra-te de colocar o teu link real do Vercel no href abaixo -->
+  <a href="https://radio-arch-beige.vercel.app/" target="_blank">
+    <img src="https://img.shields.io/badge/Deploy-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Deploy on Vercel" />
+  </a>
+  <img src="https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white" alt="Next.js" />
+  <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React" />
+  <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS" />
+  <img src="https://img.shields.io/badge/Arch_Linux-1793D1?style=for-the-badge&logo=arch-linux&logoColor=white" alt="Arch Linux Vibe" />
+</p>
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+<h3 align="center">
+  🔴 <a href="https://SEU-LINK-AQUI.vercel.app" target="_blank">Acessar o RadioArch Online</a>
+</h3>
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+<hr>
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🎯 A Proposta
+O **RadioArch** nasceu da vontade de unir a nostalgia dos rádios analógicos e ecrãs LCD antigos com a velocidade e o design das tecnologias web modernas. A proposta é oferecer uma experiência imersiva e altamente personalizável para escutar rádios do mundo inteiro, com um visual "hacker" e comandos de teclado integrados, otimizado tanto para Desktop (simulando um hardware real) como para Mobile.
 
-## Learn More
+## 💡 Sobre o Projeto
+Desenvolvido por **Luis Paulo (@LuisPauloCN507)**, este projeto serve como um laboratório prático para aplicar conceitos avançados de Front-End, incluindo manipulação de áudio com a Web Audio API, animações complexas baseadas em *scroll* (Intersection Observer), design responsivo extremo (Tailwind CSS) e consumo de APIs externas (Radio Browser API).
 
-To learn more about Next.js, take a look at the following resources:
+## ✨ Funcionalidades Principais
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+* **Player Analógico & Visualizador de Áudio:** Painel LCD interativo com barras de equalização em tempo real (Web Audio API).
+* **Temas Customizáveis:** Alterna a cor do ecrã LCD entre `CYAN`, `PAPAYA`, `ARCH` e `TERMINAL`.
+* **Global Scanner API:** Pesquisa e adiciona rádios de qualquer país ou género através da base de dados global do *Radio-Browser*.
+* **Injeção de Frequência:** Adiciona a tua própria URL de streaming (Web Radio customizada) diretamente no deck.
+* **Gravador Integrado (REC):** Grava os teus excertos de rádio favoritos diretamente para o teu PC em formato `.webm`.
+* **Command Center:** Controlo total por atalhos de teclado (ex: `Espaço` para Play, `M` para Mute, `C` para mudar de cor, `K` para abrir o menu).
+* **Sleep Timer:** Programa o rádio para desligar automaticamente (15, 30 ou 60 minutos).
+* **System Dump (Backup/Restore):** Exporta e importa as tuas rádios customizadas, favoritos e configurações num ficheiro `.json`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🛠️ Tecnologias Utilizadas
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+* **Framework:** [Next.js](https://nextjs.org/) (App Router)
+* **Estilização:** [Tailwind CSS](https://tailwindcss.com/)
+* **Ícones:** [Lucide React](https://lucide.dev/)
+* **API de Rádios:** [Radio Browser API](https://www.radio-browser.info/)
+* **Áudio:** HTML5 `<audio>` + Web Audio API + MediaRecorder
+* **Hospedagem:** [Vercel](https://vercel.com/)
