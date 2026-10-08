@@ -19,7 +19,7 @@
 </p>
 
 <h3 align="center">
-  🔴 <a href="https://SEU-LINK-AQUI.vercel.app" target="_blank">Acessar o RadioArch Online</a>
+  🔴 <a href=""https://radio-arch-beige.vercel.app/" target="_blank">Acessar o RadioArch Online</a>
 </h3>
 
 <hr>
